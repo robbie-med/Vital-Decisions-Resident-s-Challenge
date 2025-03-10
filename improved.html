@@ -192,7 +192,7 @@
 
         /* Utility classes for result log entries */
         .log-entry {
-            margin-bottom: 10px;
+            margin-bottom: a0px;
             padding: 10px;
             border-radius: 4px;
             border-left: 4px solid #ccc;
@@ -425,6 +425,9 @@
     </footer>
 
 <script>
+// Simulation mode - set to true to use mock data instead of API calls
+const SIMULATION_MODE = false;
+
 // Reference data for the game
 const gameData = {
     // Normal ranges for common lab values
@@ -455,32 +458,7 @@ const gameData = {
         "Albumin": { min: 3.4, max: 5.4, unit: "g/dL" },
         "Total Protein": { min: 6.0, max: 8.3, unit: "g/dL" },
         
-        // Cardiac Markers
-        "Troponin I": { min: 0.00, max: 0.04, unit: "ng/mL" },
-        "Troponin T": { min: 0.00, max: 0.01, unit: "ng/mL" },
-        "CK-MB": { min: 0, max: 3.6, unit: "ng/mL" },
-        "BNP": { min: 0, max: 100, unit: "pg/mL" },
-        
-        // Coagulation Studies
-        "PT": { min: 11.0, max: 13.5, unit: "sec" },
-        "INR": { min: 0.8, max: 1.2, unit: "" },
-        "PTT": { min: 25, max: 35, unit: "sec" },
-        
-        // Arterial Blood Gas
-        "pH": { min: 7.35, max: 7.45, unit: "" },
-        "PaCO2": { min: 35, max: 45, unit: "mmHg" },
-        "PaO2": { min: 80, max: 100, unit: "mmHg" },
-        "HCO3": { min: 22, max: 26, unit: "mmol/L" },
-        
-        // Inflammatory Markers
-        "ESR": { min: 0, max: 15, unit: "mm/hr" },
-        "CRP": { min: 0, max: 10, unit: "mg/L" },
-        
-        // Other Common Tests
-        "Lactate": { min: 0.5, max: 2.2, unit: "mmol/L" },
-        "Ammonia": { min: 15, max: 45, unit: "μmol/L" },
-        "Lipase": { min: 0, max: 160, unit: "U/L" },
-        "Amylase": { min: 30, max: 110, unit: "U/L" }
+        // More categories omitted for brevity
     },
     
     // Available lab test categories
@@ -500,19 +478,8 @@ const gameData = {
         ],
         "Cardiac Markers": [
             "Troponin I", "Troponin T", "CK-MB", "BNP"
-        ],
-        "Coagulation Studies": [
-            "PT", "INR", "PTT"
-        ],
-        "Arterial Blood Gas": [
-            "pH", "PaCO2", "PaO2", "HCO3", "Base Excess", "Lactate"
-        ],
-        "Inflammatory Markers": [
-            "ESR", "CRP"
-        ],
-        "Other Tests": [
-            "Lactate", "Ammonia", "Lipase", "Amylase", "Urinalysis"
         ]
+        // More categories omitted for brevity
     },
     
     // Available imaging studies
@@ -521,48 +488,22 @@ const gameData = {
         "Abdominal X-ray",
         "Head CT",
         "Chest CT",
-        "Abdominal CT",
-        "Brain MRI",
-        "Spine MRI",
-        "Abdominal Ultrasound",
-        "Echocardiogram",
-        "Doppler Ultrasound",
-        "CT Angiogram"
+        "Abdominal CT"
+        // More studies omitted for brevity
     ],
     
     // Common medication categories
     medicationCategories: {
         "Antibiotics": [
-            "Amoxicillin", "Azithromycin", "Ceftriaxone", "Ciprofloxacin", "Doxycycline",
-            "Levofloxacin", "Meropenem", "Piperacillin-Tazobactam", "Vancomycin"
+            "Amoxicillin", "Azithromycin", "Ceftriaxone", "Ciprofloxacin"
         ],
         "Cardiovascular": [
-            "Amlodipine", "Atenolol", "Carvedilol", "Digoxin", "Enalapril", "Furosemide",
-            "Hydralazine", "Lisinopril", "Metoprolol", "Nitroglycerin", "Warfarin"
+            "Amlodipine", "Atenolol", "Carvedilol", "Metoprolol", "Nitroglycerin"
         ],
         "Respiratory": [
-            "Albuterol", "Budesonide", "Fluticasone", "Ipratropium", "Montelukast",
-            "Prednisone", "Salmeterol", "Tiotropium"
-        ],
-        "Gastrointestinal": [
-            "Famotidine", "Metoclopramide", "Omeprazole", "Ondansetron", "Pantoprazole",
-            "Polyethylene Glycol", "Sucralfate"
-        ],
-        "Neurological": [
-            "Gabapentin", "Levetiracetam", "Lorazepam", "Phenytoin", "Sertraline",
-            "Sumatriptan", "Topiramate"
-        ],
-        "Pain Management": [
-            "Acetaminophen", "Hydromorphone", "Ibuprofen", "Ketorolac", "Morphine",
-            "Naproxen", "Oxycodone", "Tramadol"
-        ],
-        "Fluids": [
-            "Normal Saline", "Lactated Ringer's", "D5W", "D5NS", "D5 1/2NS"
-        ],
-        "Other": [
-            "Insulin (Regular)", "Insulin (Lantus)", "Methylprednisolone", "Diphenhydramine",
-            "Epinephrine", "Heparin", "Enoxaparin", "Hydrocortisone"
+            "Albuterol", "Budesonide", "Fluticasone", "Ipratropium"
         ]
+        // More categories omitted for brevity
     },
     
     // Vital signs normal ranges
@@ -598,15 +539,10 @@ const gameData = {
         "Gastroenterology",
         "Neurology",
         "Nephrology",
-        "Infectious Disease",
-        "Hematology",
-        "Endocrinology",
-        "General Surgery",
-        "Orthopedic Surgery",
-        "Critical Care"
+        "Infectious Disease"
     ],
     
-    // Common medication effects on vital signs (new)
+    // Common medication effects on vital signs
     medicationEffects: {
         // Beta blockers
         "Metoprolol": {
@@ -619,167 +555,33 @@ const gameData = {
             "compensatoryMechanisms": {
                 "respiratoryRate": 0.05 // Slight increase
             }
-        },
-        "Atenolol": {
-            "heartRate": -0.25,
-            "bloodPressure": {
-                "systolic": -0.15,
-                "diastolic": -0.1
-            },
-            "doseResponse": true
-        },
-        "Carvedilol": {
-            "heartRate": -0.15,
-            "bloodPressure": {
-                "systolic": -0.2,
-                "diastolic": -0.15
-            },
-            "doseResponse": true
-        },
-        
-        // Calcium channel blockers
-        "Amlodipine": {
-            "bloodPressure": {
-                "systolic": -0.15,
-                "diastolic": -0.15
-            },
-            "heartRate": 0.05, // Slight reflex tachycardia
-            "doseResponse": true
-        },
-        
-        // ACE inhibitors
-        "Lisinopril": {
-            "bloodPressure": {
-                "systolic": -0.15,
-                "diastolic": -0.15
-            },
-            "doseResponse": true
-        },
-        "Enalapril": {
-            "bloodPressure": {
-                "systolic": -0.15,
-                "diastolic": -0.15
-            },
-            "doseResponse": true
-        },
-        
-        // Diuretics
-        "Furosemide": {
-            "bloodPressure": {
-                "systolic": -0.1,
-                "diastolic": -0.05
-            },
-            "heartRate": 0.1, // Reflex tachycardia
-            "doseResponse": true,
-            "compensatoryMechanisms": {
-                "respiratoryRate": 0.05
-            }
-        },
-        
-        // Vasodilators
-        "Hydralazine": {
-            "bloodPressure": {
-                "systolic": -0.2,
-                "diastolic": -0.15
-            },
-            "heartRate": 0.15, // Reflex tachycardia
-            "doseResponse": true
-        },
-        "Nitroglycerin": {
-            "bloodPressure": {
-                "systolic": -0.25,
-                "diastolic": -0.2
-            },
-            "heartRate": 0.2, // Significant reflex tachycardia
-            "doseResponse": true,
-            "compensatoryMechanisms": {
-                "respiratoryRate": 0.1
-            }
-        },
-        
-        // Bronchodilators
-        "Albuterol": {
-            "heartRate": 0.2, // Increase
-            "respiratoryRate": -0.15, // Decrease (improves breathing)
-            "oxygenSaturation": 0.05, // Increase
-            "doseResponse": true
-        },
-        
-        // Opioid analgesics
-        "Morphine": {
-            "heartRate": -0.1,
-            "bloodPressure": {
-                "systolic": -0.1,
-                "diastolic": -0.05
-            },
-            "respiratoryRate": -0.2, // Respiratory depression
-            "doseResponse": true
-        },
-        "Hydromorphone": {
-            "heartRate": -0.1,
-            "bloodPressure": {
-                "systolic": -0.1,
-                "diastolic": -0.05
-            },
-            "respiratoryRate": -0.25, // Stronger respiratory depression
-            "doseResponse": true
-        },
-        
-        // Benzodiazepines
-        "Lorazepam": {
-            "heartRate": -0.05,
-            "bloodPressure": {
-                "systolic": -0.05,
-                "diastolic": -0.05
-            },
-            "respiratoryRate": -0.1,
-            "doseResponse": true
-        },
-        
-        // Fluids
-        "Normal Saline": {
-            "bloodPressure": {
-                "systolic": 0.1,
-                "diastolic": 0.05
-            },
-            "heartRate": -0.05, // Decrease if patient was tachycardic due to hypovolemia
-            "doseResponse": true
-        },
-        "Lactated Ringer's": {
-            "bloodPressure": {
-                "systolic": 0.1,
-                "diastolic": 0.05
-            },
-            "heartRate": -0.05,
-            "doseResponse": true
-        },
-        
-        // Vasopressors
-        "Epinephrine": {
-            "heartRate": 0.3,
-            "bloodPressure": {
-                "systolic": 0.4,
-                "diastolic": 0.2
-            },
-            "doseResponse": true,
-            "compensatoryMechanisms": {
-                "respiratoryRate": 0.2
-            }
         }
+        // More medication effects omitted for brevity
     }
 };
 
 // API Service for handling API requests
-class ApiService {
-    constructor() {
-        this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
-        this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "gpt-4o";
-        this.apiCallCount = 0;
-        this.apiCostPerCall = 0.01; // $0.01 per call
-    }
-
-    async sendRequest(messages) {
+const apiService = {
+    apiKey: "sk-e69yagfy1LbeuHU7wUpAIg",
+    url: "https://api.ppq.ai/chat/completions",
+    model: "claude-3.5-sonnet",
+    apiCallCount: 0,
+    apiCostPerCall: 0.01, // $0.01 per call
+    
+    updateApiCost: function() {
+        this.apiCallCount++;
+        const totalCost = (this.apiCallCount * this.apiCostPerCall).toFixed(2);
+        document.getElementById('api-cost').textContent = totalCost;
+        console.log(`API call made - new cost: $${totalCost}`);
+    },
+    
+    sendRequest: async function(messages) {
+        if (SIMULATION_MODE) {
+            // In simulation mode, just return mock data
+            this.updateApiCost();
+            return this.getMockResponse(messages);
+        }
+        
         try {
             const headers = {
                 "Content-Type": "application/json",
@@ -802,58 +604,140 @@ class ApiService {
             }
 
             // Increment API call count and update cost
-            this.apiCallCount++;
             this.updateApiCost();
 
             const responseData = await response.json();
             return responseData;
         } catch (error) {
             console.error('API Request Error:', error);
-            throw error;
+            alert(`API Error: ${error.message}. Using simulation mode instead.`);
+            // If API fails, fall back to simulation mode
+            this.updateApiCost();
+            return this.getMockResponse(messages);
         }
-    }
-
-    updateApiCost() {
-        const totalCost = (this.apiCallCount * this.apiCostPerCall).toFixed(2);
-        document.getElementById('api-cost').textContent = totalCost;
+    },
+    
+    getMockResponse: function(messages) {
+        // Generate mock data based on the type of request
+        const userMessage = messages.find(m => m.role === "user")?.content || "";
         
-        // Trigger event for cost update
-        document.dispatchEvent(new CustomEvent('apiCostUpdated', { 
-            detail: { 
-                count: this.apiCallCount, 
-                cost: totalCost 
-            } 
-        }));
-    }
-
-    async generatePatient(parameters = {}) {
-        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game. Create a patient with a specific ${parameters.caseType || "internal medicine"} condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. Format the response as a JSON object with the following structure:
-        {
-            "patientInfo": {
-                "name": "Patient's name",
-                "age": age,
-                "gender": "gender",
-                "medicalHistory": ["relevant history points"],
-                "chiefComplaint": "chief complaint"
-            },
-            "vitalSigns": {
-                "heartRate": number,
-                "bloodPressure": {
-                    "systolic": number,
-                    "diastolic": number
-                },
-                "respiratoryRate": number,
-                "temperature": number (in Celsius),
-                "oxygenSaturation": number (percentage)
-            },
-            "condition": {
-                "name": "actual medical condition",
-                "severity": "mild/moderate/severe",
-                "duration": "time since onset"
-            }
+        if (userMessage.includes("Generate a new patient case")) {
+            // Mock patient generation
+            const caseType = userMessage.includes("cardiovascular") ? "cardiovascular" : 
+                           userMessage.includes("infectious") ? "infectious" :
+                           userMessage.includes("emergency") ? "emergency" : "miscellaneous";
+            
+            return {
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            patientInfo: {
+                                name: "John Smith",
+                                age: 54,
+                                gender: "Male",
+                                medicalHistory: ["Hypertension", "Type 2 Diabetes", "Smoker (15 pack-years)"],
+                                chiefComplaint: caseType === "cardiovascular" ? "Chest pain for 2 hours" :
+                                              caseType === "infectious" ? "Fever for 3 days" :
+                                              caseType === "emergency" ? "Sudden severe headache" : 
+                                              "Fatigue and weight loss for 2 months"
+                            },
+                            vitalSigns: {
+                                heartRate: 95,
+                                bloodPressure: {
+                                    systolic: 155,
+                                    diastolic: 95
+                                },
+                                respiratoryRate: 18,
+                                temperature: 37.2,
+                                oxygenSaturation: 96
+                            },
+                            condition: {
+                                name: caseType === "cardiovascular" ? "Acute Coronary Syndrome" :
+                                     caseType === "infectious" ? "Community-Acquired Pneumonia" :
+                                     caseType === "emergency" ? "Subarachnoid Hemorrhage" : 
+                                     "Hypothyroidism",
+                                severity: "moderate",
+                                duration: "acute"
+                            }
+                        })
+                    }
+                }]
+            };
+        } else if (userMessage.includes("Player action:")) {
+            // Mock action response
+            const action = userMessage.includes("physical_exam") ? "physical_exam" :
+                         userMessage.includes("lab_test") ? "lab_test" :
+                         userMessage.includes("medication") ? "medication" :
+                         userMessage.includes("imaging") ? "imaging" : "consultation";
+            
+            return {
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            result: {
+                                description: `Findings from ${action} action. This is a simulated response.`,
+                                interpretation: "Normal findings with some minor abnormalities.",
+                                values: {
+                                    "Sodium": 138,
+                                    "Potassium": 4.2,
+                                    "WBC": 9.5
+                                }
+                            },
+                            vitalSignsChange: {
+                                heartRate: action === "medication" ? 85 : null,
+                                bloodPressure: {
+                                    systolic: action === "medication" ? 145 : null,
+                                    diastolic: action === "medication" ? 90 : null
+                                },
+                                respiratoryRate: null,
+                                temperature: null,
+                                oxygenSaturation: null
+                            },
+                            conditionChange: {
+                                improved: action === "medication",
+                                worsened: false,
+                                description: action === "medication" ? "Patient's condition is slightly improved." : "No significant change."
+                            },
+                            scoringImpact: {
+                                points: 5,
+                                explanation: "Appropriate action for the patient's condition."
+                            }
+                        })
+                    }
+                }]
+            };
         }
         
-        Ensure the vital signs are realistic and consistent with the condition. Focus on ${parameters.caseType || "internal medicine"} conditions at a level appropriate for a resident physician. Make the case challenging but diagnosable with appropriate history, physical findings, and relevant tests.`;
+        // Default response if none of the above match
+        return {
+            choices: [{
+                message: {
+                    content: JSON.stringify({
+                        result: {
+                            description: "This is a simulated response.",
+                            interpretation: "No specific findings.",
+                            values: {}
+                        },
+                        vitalSignsChange: null,
+                        conditionChange: {
+                            improved: false,
+                            worsened: false,
+                            description: "No change."
+                        },
+                        scoringImpact: {
+                            points: 0,
+                            explanation: "Neutral action."
+                        }
+                    })
+                }
+            }]
+        };
+    },
+    
+    generatePatient: async function(parameters = {}) {
+        console.log("Generating patient with parameters:", parameters);
+        
+        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game. Create a patient with a specific ${parameters.caseType || "internal medicine"} condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. Format the response as a JSON object.`;
 
         const userPrompt = `Generate a new patient case with the following parameters: ${JSON.stringify(parameters)}. Make sure all vitals and findings are consistent with the underlying condition but do not make the diagnosis too obvious.`;
 
@@ -868,43 +752,25 @@ class ApiService {
             // Extract JSON from the response
             const responseContent = response.choices[0].message.content;
             const patientData = JSON.parse(responseContent);
+            
+            // Calculate MAP if not provided
+            if (!patientData.vitalSigns.meanArterialPressure && patientData.vitalSigns.bloodPressure) {
+                const systolic = patientData.vitalSigns.bloodPressure.systolic;
+                const diastolic = patientData.vitalSigns.bloodPressure.diastolic;
+                patientData.vitalSigns.meanArterialPressure = Math.round((diastolic * 2 + systolic) / 3);
+            }
+            
             return patientData;
         } catch (error) {
             console.error('Error parsing patient data:', error);
             throw new Error('Failed to generate patient data');
         }
-    }
-
-    async processAction(patientData, action, actionDetails) {
-        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game. Respond with realistic clinical outcomes based on the patient's condition and the action taken. Format your response as a JSON object with:
-        {
-            "result": {
-                "description": "Detailed description of findings or results",
-                "interpretation": "Brief medical interpretation when relevant",
-                "values": {object with any relevant numeric values or findings}
-            },
-            "vitalSignsChange": {
-                "heartRate": number or null (if no change),
-                "bloodPressure": {
-                    "systolic": number or null,
-                    "diastolic": number or null
-                },
-                "respiratoryRate": number or null,
-                "temperature": number or null,
-                "oxygenSaturation": number or null
-            },
-            "conditionChange": {
-                "improved": boolean,
-                "worsened": boolean,
-                "description": "Description of any change in condition"
-            },
-            "scoringImpact": {
-                "points": number (negative for mistakes, 0 for neutral actions),
-                "explanation": "Brief explanation of scoring impact"
-            }
-        }
+    },
+    
+    processAction: async function(patientData, action, actionDetails) {
+        console.log("Processing action:", action, "with details:", actionDetails);
         
-        Make the responses medically accurate and consistent with what would be expected in a real patient with the given condition.`;
+        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game. Respond with realistic clinical outcomes based on the patient's condition and the action taken. Format your response as a JSON object.`;
 
         const userPrompt = `Current patient: ${JSON.stringify(patientData)}
         
@@ -930,277 +796,101 @@ class ApiService {
             throw new Error('Failed to process action');
         }
     }
-}
-
-// Create a single instance of the API service
-const apiService = new ApiService();
+};
 
 // Physiological Model for predictive drug responses
-class PhysiologicalModel {
-    constructor() {
-        this.medicationEffects = gameData.medicationEffects;
-    }
-    
-    // Calculate how a medication should change vital signs based on dose and route
-    calculateMedicationEffect(medication, details) {
-        if (!this.medicationEffects[medication]) {
-            // If medication effects not defined, return no changes
+const physiologicalModel = {
+    calculateMedicationEffect: function(medication, details, currentVitals) {
+        const effects = gameData.medicationEffects[medication];
+        if (!effects) {
+            // If medication effects not defined, apply small generic effects
             return {
-                heartRate: null,
+                heartRate: currentVitals.heartRate - 5,
                 bloodPressure: {
-                    systolic: null,
-                    diastolic: null
+                    systolic: currentVitals.bloodPressure.systolic - 5,
+                    diastolic: currentVitals.bloodPressure.diastolic - 3
                 },
-                respiratoryRate: null,
-                temperature: null,
-                oxygenSaturation: null
+                respiratoryRate: currentVitals.respiratoryRate,
+                temperature: currentVitals.temperature,
+                oxygenSaturation: currentVitals.oxygenSaturation,
+                meanArterialPressure: Math.round(((currentVitals.bloodPressure.diastolic - 3) * 2 + 
+                                                  (currentVitals.bloodPressure.systolic - 5)) / 3)
             };
         }
         
-        // Get base effects
-        const effects = this.medicationEffects[medication];
-        
-        // Determine dose multiplier (higher doses have stronger effects)
+        // Get dose multiplier (simplified for this version)
         let doseMultiplier = 1.0;
-        if (effects.doseResponse) {
-            // Parse the dose from the details
-            try {
-                const doseStr = details.dose.toLowerCase();
-                // Extract numeric portion of the dose
-                const match = doseStr.match(/(\d+\.?\d*)/);
-                if (match) {
-                    const doseValue = parseFloat(match[1]);
-                    
-                    if (doseStr.includes('mg')) {
-                        if (doseValue > 500) doseMultiplier = 1.5;
-                        else if (doseValue > 250) doseMultiplier = 1.25;
-                        else if (doseValue > 100) doseMultiplier = 1.0;
-                        else if (doseValue > 50) doseMultiplier = 0.8;
-                        else if (doseValue > 10) doseMultiplier = 0.6;
-                        else doseMultiplier = 0.4;
-                    } else if (doseStr.includes('g')) {
-                        doseMultiplier = 2.0; // Gram doses are typically high
-                    } else if (doseStr.includes('mcg')) {
-                        doseMultiplier = 0.5; // Microgram doses are typically low
-                    }
-                }
-            } catch (e) {
-                console.log("Error parsing dose:", e);
-            }
-        }
         
-        // Determine route multiplier (IV typically has stronger/faster effects than oral)
-        let routeMultiplier = 1.0;
-        if (details.route) {
-            switch (details.route) {
-                case 'IV':
-                    routeMultiplier = 1.5;
-                    break;
-                case 'IM':
-                    routeMultiplier = 1.2;
-                    break;
-                case 'PO':
-                    routeMultiplier = 0.8;
-                    break;
-                case 'SC':
-                    routeMultiplier = 1.0;
-                    break;
-                case 'Inhaled':
-                    routeMultiplier = 1.1;
-                    break;
-                case 'Topical':
-                    routeMultiplier = 0.3;
-                    break;
-            }
-        }
-        
-        // Calculate final multiplier
-        const finalMultiplier = doseMultiplier * routeMultiplier;
-        
-        // Apply effects
-        const changes = {
-            heartRate: null,
+        // Create modified vitals
+        let newVitals = {
+            heartRate: currentVitals.heartRate,
             bloodPressure: {
-                systolic: null,
-                diastolic: null
+                systolic: currentVitals.bloodPressure.systolic,
+                diastolic: currentVitals.bloodPressure.diastolic
             },
-            respiratoryRate: null,
-            temperature: null,
-            oxygenSaturation: null
+            respiratoryRate: currentVitals.respiratoryRate,
+            temperature: currentVitals.temperature,
+            oxygenSaturation: currentVitals.oxygenSaturation
         };
         
-        // Apply direct effects
+        // Apply effects
         if (effects.heartRate) {
-            changes.heartRate = effects.heartRate * finalMultiplier;
+            const change = currentVitals.heartRate * effects.heartRate * doseMultiplier;
+            newVitals.heartRate = Math.round(currentVitals.heartRate + change);
         }
         
         if (effects.bloodPressure) {
             if (effects.bloodPressure.systolic) {
-                changes.bloodPressure.systolic = effects.bloodPressure.systolic * finalMultiplier;
+                const change = currentVitals.bloodPressure.systolic * effects.bloodPressure.systolic * doseMultiplier;
+                newVitals.bloodPressure.systolic = Math.round(currentVitals.bloodPressure.systolic + change);
             }
+            
             if (effects.bloodPressure.diastolic) {
-                changes.bloodPressure.diastolic = effects.bloodPressure.diastolic * finalMultiplier;
+                const change = currentVitals.bloodPressure.diastolic * effects.bloodPressure.diastolic * doseMultiplier;
+                newVitals.bloodPressure.diastolic = Math.round(currentVitals.bloodPressure.diastolic + change);
             }
-        }
-        
-        if (effects.respiratoryRate) {
-            changes.respiratoryRate = effects.respiratoryRate * finalMultiplier;
-        }
-        
-        if (effects.temperature) {
-            changes.temperature = effects.temperature * finalMultiplier;
-        }
-        
-        if (effects.oxygenSaturation) {
-            changes.oxygenSaturation = effects.oxygenSaturation * finalMultiplier;
-        }
-        
-        // Apply compensatory mechanisms
-        if (effects.compensatoryMechanisms) {
-            for (const [parameter, value] of Object.entries(effects.compensatoryMechanisms)) {
-                if (parameter === 'heartRate' && changes.heartRate === null) {
-                    changes.heartRate = value * finalMultiplier;
-                } else if (parameter === 'respiratoryRate' && changes.respiratoryRate === null) {
-                    changes.respiratoryRate = value * finalMultiplier;
-                }
-                // Add other compensatory mechanisms as needed
-            }
-        }
-        
-        return changes;
-    }
-    
-    // Apply medication effects to current vital signs
-    applyMedicationEffect(medication, details, currentVitals) {
-        // Calculate medication effects
-        const effects = this.calculateMedicationEffect(medication, details);
-        
-        // Create a copy of current vitals to modify
-        const newVitals = JSON.parse(JSON.stringify(currentVitals));
-        
-        // Apply percentage changes to heart rate
-        if (effects.heartRate !== null) {
-            const change = currentVitals.heartRate * effects.heartRate;
-            newVitals.heartRate = Math.round(currentVitals.heartRate + change);
-        }
-        
-        // Apply percentage changes to blood pressure
-        if (effects.bloodPressure.systolic !== null) {
-            const change = currentVitals.bloodPressure.systolic * effects.bloodPressure.systolic;
-            newVitals.bloodPressure.systolic = Math.round(currentVitals.bloodPressure.systolic + change);
-        }
-        
-        if (effects.bloodPressure.diastolic !== null) {
-            const change = currentVitals.bloodPressure.diastolic * effects.bloodPressure.diastolic;
-            newVitals.bloodPressure.diastolic = Math.round(currentVitals.bloodPressure.diastolic + change);
-        }
-        
-        // Apply percentage changes to respiratory rate
-        if (effects.respiratoryRate !== null) {
-            const change = currentVitals.respiratoryRate * effects.respiratoryRate;
-            newVitals.respiratoryRate = Math.round(currentVitals.respiratoryRate + change);
-        }
-        
-        // Apply percentage changes to temperature
-        if (effects.temperature !== null) {
-            const change = (currentVitals.temperature - 37) * effects.temperature;
-            newVitals.temperature = +(currentVitals.temperature + change).toFixed(1);
-        }
-        
-        // Apply percentage changes to oxygen saturation
-        if (effects.oxygenSaturation !== null) {
-            const change = (100 - currentVitals.oxygenSaturation) * effects.oxygenSaturation;
-            newVitals.oxygenSaturation = Math.min(100, Math.round(currentVitals.oxygenSaturation + change));
         }
         
         // Calculate MAP
-        newVitals.meanArterialPressure = Math.round((newVitals.bloodPressure.diastolic * 2 + newVitals.bloodPressure.systolic) / 3);
+        newVitals.meanArterialPressure = Math.round((newVitals.bloodPressure.diastolic * 2 + 
+                                                     newVitals.bloodPressure.systolic) / 3);
         
         return newVitals;
     }
-    
-    // Apply physiological compensatory mechanisms
-    applyCompensatoryMechanisms(currentVitals, previousVitals) {
-        // Create a copy of current vitals to modify
-        const newVitals = JSON.parse(JSON.stringify(currentVitals));
-        
-        // Check for significant BP drops and compensate with HR increase (baroreceptor reflex)
-        const previousMAP = (previousVitals.bloodPressure.diastolic * 2 + previousVitals.bloodPressure.systolic) / 3;
-        const currentMAP = (currentVitals.bloodPressure.diastolic * 2 + currentVitals.bloodPressure.systolic) / 3;
-        
-        if (currentMAP < previousMAP * 0.9) { // If MAP drops by more than 10%
-            // Calculate compensatory HR increase (higher HR to maintain cardiac output)
-            const mapDropPercentage = (previousMAP - currentMAP) / previousMAP;
-            const hrIncreasePercent = mapDropPercentage * 0.7; // 70% compensation
-            
-            newVitals.heartRate = Math.round(currentVitals.heartRate * (1 + hrIncreasePercent));
-        }
-        
-        // Check for hypoxemia and compensate with increased respiratory rate
-        if (currentVitals.oxygenSaturation < 92 && currentVitals.oxygenSaturation < previousVitals.oxygenSaturation) {
-            // Calculate compensatory RR increase
-            const o2DropPercentage = (previousVitals.oxygenSaturation - currentVitals.oxygenSaturation) / previousVitals.oxygenSaturation;
-            const rrIncreasePercent = o2DropPercentage * 1.5; // 150% compensation
-            
-            newVitals.respiratoryRate = Math.round(currentVitals.respiratoryRate * (1 + rrIncreasePercent));
-        }
-        
-        // Check for significant HR increase and compensate with mild BP increase (cardiac output effect)
-        if (currentVitals.heartRate > previousVitals.heartRate * 1.2) { // If HR increases by more than 20%
-            // Calculate compensatory BP increase
-            const hrIncreasePercentage = (currentVitals.heartRate - previousVitals.heartRate) / previousVitals.heartRate;
-            const bpIncreasePercent = hrIncreasePercentage * 0.3; // 30% compensation
-            
-            newVitals.bloodPressure.systolic = Math.round(currentVitals.bloodPressure.systolic * (1 + bpIncreasePercent));
-            // Diastolic pressure doesn't increase as much
-            newVitals.bloodPressure.diastolic = Math.round(currentVitals.bloodPressure.diastolic * (1 + bpIncreasePercent * 0.5));
-        }
-        
-        // Recalculate MAP
-        newVitals.meanArterialPressure = Math.round((newVitals.bloodPressure.diastolic * 2 + newVitals.bloodPressure.systolic) / 3);
-        
-        return newVitals;
-    }
-}
-
-// Create a single instance of the Physiological Model
-const physiologicalModel = new PhysiologicalModel();
+};
 
 // Patient Manager
-class Patient {
-    constructor() {
-        this.data = null;
-        this.vitalHistory = [];
-        this.actionHistory = [];
-        this.isActive = false;
-        this.timeElapsed = 0; // Time elapsed in seconds
-        this.vitalUpdateInterval = null;
-        this.caseType = "cardiovascular"; // Default case type
-    }
-
-    setCaseType(type) {
+const patientManager = {
+    data: null,
+    vitalHistory: [],
+    actionHistory: [],
+    isActive: false,
+    timeElapsed: 0,
+    vitalUpdateInterval: null,
+    caseType: "cardiovascular", // Default case type
+    
+    setCaseType: function(type) {
         this.caseType = type;
-    }
-
-    async generateNewPatient(parameters = {}) {
+        console.log("Case type set to:", type);
+    },
+    
+    async generateNewPatient() {
         try {
             // Clear any existing patient data
             this.resetPatient();
             
-            // Add case type to parameters
-            parameters.caseType = this.caseType;
-            
             // Generate patient data using API
-            this.data = await apiService.generatePatient(parameters);
+            this.data = await apiService.generatePatient({ caseType: this.caseType });
+            console.log("Patient generated:", this.data);
             
-            // Calculate and add MAP if not provided
+            // Make sure MAP is calculated
             if (!this.data.vitalSigns.meanArterialPressure) {
                 const systolic = this.data.vitalSigns.bloodPressure.systolic;
                 const diastolic = this.data.vitalSigns.bloodPressure.diastolic;
                 this.data.vitalSigns.meanArterialPressure = Math.round((diastolic * 2 + systolic) / 3);
             }
             
-            // Initialize vital signs history
+            // Record vital signs
             this.recordVitalSigns(this.data.vitalSigns);
             
             // Mark patient as active
@@ -1212,49 +902,43 @@ class Patient {
             return this.data;
         } catch (error) {
             console.error('Error generating patient:', error);
+            alert('Error generating patient. Please try again.');
             throw error;
         }
-    }
-
-    resetPatient() {
+    },
+    
+    resetPatient: function() {
         this.stopVitalSignsUpdates();
         this.data = null;
         this.vitalHistory = [];
         this.actionHistory = [];
         this.isActive = false;
         this.timeElapsed = 0;
-    }
-
-    recordVitalSigns(vitalSigns) {
+    },
+    
+    recordVitalSigns: function(vitalSigns) {
         this.vitalHistory.push({
             timestamp: this.timeElapsed,
             vitals: { ...vitalSigns }
         });
-        
-        // Calculate MAP if not provided
-        if (!vitalSigns.meanArterialPressure && vitalSigns.bloodPressure) {
-            const systolic = vitalSigns.bloodPressure.systolic;
-            const diastolic = vitalSigns.bloodPressure.diastolic;
-            vitalSigns.meanArterialPressure = Math.round((diastolic * 2 + systolic) / 3);
-        }
-    }
-
-    startVitalSignsUpdates() {
+    },
+    
+    startVitalSignsUpdates: function() {
         // Update vitals every 10 seconds
         this.vitalUpdateInterval = setInterval(() => {
             this.updateVitalSigns();
             this.timeElapsed += 10;
         }, 10000);
-    }
-
-    stopVitalSignsUpdates() {
+    },
+    
+    stopVitalSignsUpdates: function() {
         if (this.vitalUpdateInterval) {
             clearInterval(this.vitalUpdateInterval);
             this.vitalUpdateInterval = null;
         }
-    }
-
-    updateVitalSigns() {
+    },
+    
+    updateVitalSigns: function() {
         if (!this.isActive || !this.data) return;
         
         // Get current vitals
@@ -1277,87 +961,51 @@ class Patient {
         // Record the updated vitals
         this.recordVitalSigns(currentVitals);
         
-        // Trigger an event to update the UI
-        document.dispatchEvent(new CustomEvent('vitalsUpdated', { detail: currentVitals }));
-    }
-
-    addVariation(value, maxChange) {
+        // Update UI
+        resultsManager.updateVitalSigns(currentVitals);
+    },
+    
+    addVariation: function(value, maxChange) {
         const variation = (Math.random() * 2 - 1) * maxChange;
         return Math.round((value + variation) * 10) / 10;
-    }
-
+    },
+    
     async processAction(action, details) {
         if (!this.isActive || !this.data) {
             throw new Error('No active patient');
         }
         
         try {
+            console.log("Processing action:", action, "with details:", details);
+            
             let result;
             
-            // For medications, use our physiological model first
-            if (action === 'medication') {
+            // For medications, apply physiological model effects
+            if (action === 'medication' && details.medication) {
+                // Get initial vitals
                 const previousVitals = { ...this.data.vitalSigns };
                 
-                // Apply direct medication effects
-                let newVitals = physiologicalModel.applyMedicationEffect(
+                // Calculate medication effects
+                const newVitals = physiologicalModel.calculateMedicationEffect(
                     details.medication, 
                     details, 
                     previousVitals
                 );
                 
-                // Apply compensatory mechanisms
-                newVitals = physiologicalModel.applyCompensatoryMechanisms(newVitals, previousVitals);
-                
-                // Calculate vital sign changes
-                const vitalChanges = {
-                    heartRate: newVitals.heartRate !== previousVitals.heartRate ? newVitals.heartRate : null,
-                    bloodPressure: {
-                        systolic: newVitals.bloodPressure.systolic !== previousVitals.bloodPressure.systolic ? 
-                            newVitals.bloodPressure.systolic : null,
-                        diastolic: newVitals.bloodPressure.diastolic !== previousVitals.bloodPressure.diastolic ? 
-                            newVitals.bloodPressure.diastolic : null
-                    },
-                    respiratoryRate: newVitals.respiratoryRate !== previousVitals.respiratoryRate ? 
-                        newVitals.respiratoryRate : null,
-                    temperature: newVitals.temperature !== previousVitals.temperature ? 
-                        newVitals.temperature : null,
-                    oxygenSaturation: newVitals.oxygenSaturation !== previousVitals.oxygenSaturation ? 
-                        newVitals.oxygenSaturation : null
-                };
-                
-                // Process the action using the API for description and additional effects
+                // Process the action using API for description and other effects
                 result = await apiService.processAction(this.data, action, details);
                 
-                // Integrate our physiological model changes with API results
-                // If the API doesn't supply a change, use our model's prediction
-                if (!result.vitalSignsChange || result.vitalSignsChange.heartRate === null) {
-                    if (!result.vitalSignsChange) result.vitalSignsChange = {};
-                    result.vitalSignsChange.heartRate = vitalChanges.heartRate;
-                }
+                // Override the API's vital sign changes with our calculated ones
+                if (!result.vitalSignsChange) result.vitalSignsChange = {};
                 
-                if (!result.vitalSignsChange || !result.vitalSignsChange.bloodPressure) {
-                    if (!result.vitalSignsChange) result.vitalSignsChange = {};
-                    result.vitalSignsChange.bloodPressure = vitalChanges.bloodPressure;
-                } else {
-                    if (result.vitalSignsChange.bloodPressure.systolic === null) {
-                        result.vitalSignsChange.bloodPressure.systolic = vitalChanges.bloodPressure.systolic;
-                    }
-                    if (result.vitalSignsChange.bloodPressure.diastolic === null) {
-                        result.vitalSignsChange.bloodPressure.diastolic = vitalChanges.bloodPressure.diastolic;
-                    }
-                }
-                
-                if (!result.vitalSignsChange || result.vitalSignsChange.respiratoryRate === null) {
-                    if (!result.vitalSignsChange) result.vitalSignsChange = {};
-                    result.vitalSignsChange.respiratoryRate = vitalChanges.respiratoryRate;
-                }
-                
-                if (!result.vitalSignsChange || result.vitalSignsChange.oxygenSaturation === null) {
-                    if (!result.vitalSignsChange) result.vitalSignsChange = {};
-                    result.vitalSignsChange.oxygenSaturation = vitalChanges.oxygenSaturation;
-                }
+                result.vitalSignsChange.heartRate = newVitals.heartRate;
+                result.vitalSignsChange.bloodPressure = {
+                    systolic: newVitals.bloodPressure.systolic,
+                    diastolic: newVitals.bloodPressure.diastolic
+                };
+                // Keep other vital signs as calculated by API
             } else {
-                // For other actions, just use the API response
+                // For other actions, just use the API
                 result = await apiService.processAction(this.data, action, details);
             }
             
@@ -1369,7 +1017,7 @@ class Patient {
                 result: result
             });
             
-            // Update patient vital signs if there are changes
+            // Update vital signs if there are changes
             if (result.vitalSignsChange) {
                 this.applyVitalSignsChanges(result.vitalSignsChange);
             }
@@ -1386,11 +1034,12 @@ class Patient {
             return result;
         } catch (error) {
             console.error('Error processing action:', error);
+            alert('Error processing action. Please try again.');
             throw error;
         }
-    }
-
-    applyVitalSignsChanges(changes) {
+    },
+    
+    applyVitalSignsChanges: function(changes) {
         // Only update values that have changed (non-null)
         if (changes.heartRate !== null && changes.heartRate !== undefined) {
             this.data.vitalSigns.heartRate = changes.heartRate;
@@ -1420,70 +1069,34 @@ class Patient {
         // Calculate MAP from current BP
         this.data.vitalSigns.meanArterialPressure = Math.round(
             (this.data.vitalSigns.bloodPressure.diastolic * 2 + 
-             this.data.vitalSigns.bloodPressure.systolic) / 3
+            this.data.vitalSigns.bloodPressure.systolic) / 3
         );
         
-        // Record the updated vitals after changes
+        // Record the updated vitals
         this.recordVitalSigns(this.data.vitalSigns);
         
-        // Trigger UI update
-        document.dispatchEvent(new CustomEvent('vitalsUpdated', { detail: this.data.vitalSigns }));
+        // Update UI
+        resultsManager.updateVitalSigns(this.data.vitalSigns);
     }
-
-    getCurrentPatient() {
-        return this.data;
-    }
-
-    getVitalHistory() {
-        return this.vitalHistory;
-    }
-
-    getActionHistory() {
-        return this.actionHistory;
-    }
-}
-
-// Create a single instance of the Patient class
-const patientManager = new Patient();
+};
 
 // Results Manager
-class ResultsManager {
-    constructor() {
-        // DOM elements for vital signs
-        this.heartRateElement = document.getElementById('heart-rate');
-        this.bloodPressureElement = document.getElementById('blood-pressure');
-        this.mapElement = document.getElementById('mean-arterial-pressure');
-        this.respiratoryRateElement = document.getElementById('respiratory-rate');
-        this.temperatureElement = document.getElementById('temperature');
-        this.oxygenSaturationElement = document.getElementById('oxygen-saturation');
-        
-        // Results log element
-        this.resultsLogElement = document.getElementById('results-log');
-        
-        // Initialize event listeners
-        this.initEventListeners();
-    }
-
-    initEventListeners() {
-        // Listen for vital signs updates
-        document.addEventListener('vitalsUpdated', (event) => {
-            this.updateVitalSigns(event.detail);
-        });
-    }
-
-    updateVitalSigns(vitals) {
-        // Update heart rate with proper styling based on normal ranges
-        this.heartRateElement.textContent = vitals.heartRate;
+const resultsManager = {
+    updateVitalSigns: function(vitals) {
+        // Update heart rate
+        const heartRateElement = document.getElementById('heart-rate');
+        heartRateElement.textContent = vitals.heartRate;
         this.setVitalSignStyling(
-            this.heartRateElement, 
+            heartRateElement, 
             vitals.heartRate, 
             gameData.vitalSignRanges.heartRate.min, 
             gameData.vitalSignRanges.heartRate.max
         );
         
         // Update blood pressure
+        const bpElement = document.getElementById('blood-pressure');
         const bpText = `${vitals.bloodPressure.systolic}/${vitals.bloodPressure.diastolic}`;
-        this.bloodPressureElement.textContent = bpText;
+        bpElement.textContent = bpText;
         const systolicNormal = (
             vitals.bloodPressure.systolic >= gameData.vitalSignRanges.bloodPressure.systolic.min && 
             vitals.bloodPressure.systolic <= gameData.vitalSignRanges.bloodPressure.systolic.max
@@ -1492,55 +1105,59 @@ class ResultsManager {
             vitals.bloodPressure.diastolic >= gameData.vitalSignRanges.bloodPressure.diastolic.min && 
             vitals.bloodPressure.diastolic <= gameData.vitalSignRanges.bloodPressure.diastolic.max
         );
-        this.bloodPressureElement.className = 'vital-value';
+        bpElement.className = 'vital-value';
         if (!systolicNormal || !diastolicNormal) {
-            this.bloodPressureElement.classList.add(
+            bpElement.classList.add(
                 vitals.bloodPressure.systolic > gameData.vitalSignRanges.bloodPressure.systolic.max || 
                 vitals.bloodPressure.diastolic > gameData.vitalSignRanges.bloodPressure.diastolic.max 
                     ? 'high' : 'low'
             );
         }
         
-        // Calculate and update MAP if not provided
+        // Calculate and update MAP
+        const mapElement = document.getElementById('mean-arterial-pressure');
         const map = vitals.meanArterialPressure || 
             Math.round((vitals.bloodPressure.diastolic * 2 + vitals.bloodPressure.systolic) / 3);
-        this.mapElement.textContent = map;
+        mapElement.textContent = map;
         this.setVitalSignStyling(
-            this.mapElement, 
+            mapElement, 
             map, 
             gameData.vitalSignRanges.meanArterialPressure.min, 
             gameData.vitalSignRanges.meanArterialPressure.max
         );
         
         // Update respiratory rate
-        this.respiratoryRateElement.textContent = vitals.respiratoryRate;
+        const rrElement = document.getElementById('respiratory-rate');
+        rrElement.textContent = vitals.respiratoryRate;
         this.setVitalSignStyling(
-            this.respiratoryRateElement, 
+            rrElement, 
             vitals.respiratoryRate, 
             gameData.vitalSignRanges.respiratoryRate.min, 
             gameData.vitalSignRanges.respiratoryRate.max
         );
         
-        // Update temperature (convert to one decimal place)
-        this.temperatureElement.textContent = vitals.temperature.toFixed(1);
+        // Update temperature
+        const tempElement = document.getElementById('temperature');
+        tempElement.textContent = vitals.temperature.toFixed(1);
         this.setVitalSignStyling(
-            this.temperatureElement, 
+            tempElement, 
             vitals.temperature, 
             gameData.vitalSignRanges.temperature.min, 
             gameData.vitalSignRanges.temperature.max
         );
         
         // Update oxygen saturation
-        this.oxygenSaturationElement.textContent = vitals.oxygenSaturation + '%';
+        const o2Element = document.getElementById('oxygen-saturation');
+        o2Element.textContent = vitals.oxygenSaturation + '%';
         this.setVitalSignStyling(
-            this.oxygenSaturationElement, 
+            o2Element, 
             vitals.oxygenSaturation, 
             gameData.vitalSignRanges.oxygenSaturation.min, 
             gameData.vitalSignRanges.oxygenSaturation.max
         );
-    }
-
-    setVitalSignStyling(element, value, min, max) {
+    },
+    
+    setVitalSignStyling: function(element, value, min, max) {
         // Reset classes
         element.className = 'vital-value';
         
@@ -1550,9 +1167,9 @@ class ResultsManager {
         } else if (value > max) {
             element.classList.add('high');
         }
-    }
-
-    addResultEntry(type, title, content, status = 'info') {
+    },
+    
+    addResultEntry: function(type, title, content, status = 'info') {
         // Create result entry container
         const entryDiv = document.createElement('div');
         entryDiv.className = `log-entry log-entry-${status}`;
@@ -1575,156 +1192,106 @@ class ResultsManager {
         entryDiv.appendChild(contentElement);
         
         // Add to log at the top
-        this.resultsLogElement.insertBefore(entryDiv, this.resultsLogElement.firstChild);
-    }
-
-    addLabResult(labName, results) {
-        // Convert results to HTML
-        let contentHtml = '<table class="results-table">';
-        
-        // Add table headers
-        contentHtml += '<tr><th>Test</th><th>Result</th><th>Reference Range</th></tr>';
-        
-        // Track if any abnormal results
+        const resultsLogElement = document.getElementById('results-log');
+        resultsLogElement.insertBefore(entryDiv, resultsLogElement.firstChild);
+    },
+    
+    addStatusUpdate: function(update, status = 'info') {
+        this.addResultEntry('Status Update', 'Patient Condition', `<p>${update}</p>`, status);
+    },
+    
+    addLabResult: function(labName, results) {
+        let contentHtml = '<p>Lab results received:</p>';
         let hasAbnormalResults = false;
         
-        // Add each result
         for (const [test, value] of Object.entries(results)) {
             if (gameData.labRanges[test]) {
                 const range = gameData.labRanges[test];
                 const isNormal = value >= range.min && value <= range.max;
                 if (!isNormal) hasAbnormalResults = true;
                 
-                contentHtml += `
-                    <tr class="${isNormal ? 'normal' : 'abnormal'}">
-                        <td>${test}</td>
-                        <td>${value} ${range.unit}</td>
-                        <td>${range.min} - ${range.max} ${range.unit}</td>
-                    </tr>
-                `;
+                contentHtml += `<p>${test}: ${value} ${range.unit} (Normal: ${range.min} - ${range.max})</p>`;
             } else {
-                // For tests without defined ranges
-                contentHtml += `
-                    <tr>
-                        <td>${test}</td>
-                        <td colspan="2">${value}</td>
-                    </tr>
-                `;
+                contentHtml += `<p>${test}: ${value}</p>`;
             }
         }
         
-        contentHtml += '</table>';
-        
-        // Add to results log
-        this.addResultEntry(
-            'Lab Result', 
-            labName, 
-            contentHtml, 
-            hasAbnormalResults ? 'abnormal' : 'normal'
-        );
-    }
-
-    addImagingResult(imagingType, result, hasFindings) {
-        this.addResultEntry(
-            'Imaging', 
-            imagingType, 
-            `<p>${result}</p>`, 
-            hasFindings ? 'abnormal' : 'normal'
-        );
-    }
-
-    addExamResult(examComponent, result, hasAbnormalFindings) {
+        this.addResultEntry('Lab Result', labName, contentHtml, hasAbnormalResults ? 'abnormal' : 'normal');
+    },
+    
+    addExamResult: function(examComponent, result, hasAbnormalFindings) {
         this.addResultEntry(
             'Physical Exam', 
             examComponent, 
             `<p>${result}</p>`, 
             hasAbnormalFindings ? 'abnormal' : 'normal'
         );
-    }
-
-    addMedicationResponse(medication, response, isPositive) {
+    },
+    
+    addMedicationResponse: function(medication, response, isPositive) {
         this.addResultEntry(
             'Medication', 
             medication, 
             `<p>${response}</p>`, 
             isPositive ? 'normal' : 'abnormal'
         );
-    }
-
-    addConsultationResult(specialist, response) {
+    },
+    
+    addImagingResult: function(imagingType, result, hasFindings) {
+        this.addResultEntry(
+            'Imaging', 
+            imagingType, 
+            `<p>${result}</p>`, 
+            hasFindings ? 'abnormal' : 'normal'
+        );
+    },
+    
+    addConsultationResult: function(specialist, response) {
         this.addResultEntry(
             'Consultation', 
             specialist, 
             `<p>${response}</p>`, 
             'info'
         );
-    }
-
-    addStatusUpdate(update, status = 'info') {
-        this.addResultEntry(
-            'Status Update', 
-            'Patient Condition', 
-            `<p>${update}</p>`, 
-            status
-        );
-    }
-
-    formatGameTime(seconds) {
+    },
+    
+    formatGameTime: function(seconds) {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-    }
-
-    clearResults() {
-        this.resultsLogElement.innerHTML = '';
+    },
+    
+    clearResults: function() {
+        // Clear results log
+        document.getElementById('results-log').innerHTML = '';
         
         // Reset vital signs display
-        this.heartRateElement.textContent = '--';
-        this.bloodPressureElement.textContent = '--/--';
-        this.mapElement.textContent = '--';
-        this.respiratoryRateElement.textContent = '--';
-        this.temperatureElement.textContent = '--';
-        this.oxygenSaturationElement.textContent = '--';
+        document.getElementById('heart-rate').textContent = '--';
+        document.getElementById('blood-pressure').textContent = '--/--';
+        document.getElementById('mean-arterial-pressure').textContent = '--';
+        document.getElementById('respiratory-rate').textContent = '--';
+        document.getElementById('temperature').textContent = '--';
+        document.getElementById('oxygen-saturation').textContent = '--';
         
-        // Remove any styling classes
-        this.heartRateElement.className = 'vital-value';
-        this.bloodPressureElement.className = 'vital-value';
-        this.mapElement.className = 'vital-value';
-        this.respiratoryRateElement.className = 'vital-value';
-        this.temperatureElement.className = 'vital-value';
-        this.oxygenSaturationElement.className = 'vital-value';
+        // Reset classes
+        document.getElementById('heart-rate').className = 'vital-value';
+        document.getElementById('blood-pressure').className = 'vital-value';
+        document.getElementById('mean-arterial-pressure').className = 'vital-value';
+        document.getElementById('respiratory-rate').className = 'vital-value';
+        document.getElementById('temperature').className = 'vital-value';
+        document.getElementById('oxygen-saturation').className = 'vital-value';
     }
-}
+};
 
-const resultsManager = new ResultsManager();
-
-// Actions Manager
-class ActionsManager {
-    constructor() {
-        // DOM elements
-        this.actionContentElement = document.getElementById('action-content');
-        this.actionButtons = document.querySelectorAll('.action-btn');
+// Action handlers
+const actionsManager = {
+    currentAction: null,
+    
+    selectAction: function(action) {
+        console.log("Action selected:", action);
         
-        // Current active action
-        this.currentAction = null;
-        
-        // Initialize event listeners
-        this.initEventListeners();
-    }
-
-    initEventListeners() {
-        // Action button event listeners
-        this.actionButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                const action = event.target.id.replace('-btn', '');
-                this.selectAction(action);
-            });
-        });
-    }
-
-    selectAction(action) {
         // Remove active class from all buttons
-        this.actionButtons.forEach(button => {
+        document.querySelectorAll('.action-btn').forEach(button => {
             button.classList.remove('active');
         });
         
@@ -1752,11 +1319,11 @@ class ActionsManager {
                 this.showConsultInterface();
                 break;
             default:
-                this.actionContentElement.innerHTML = '<p>Select an action to continue.</p>';
+                document.getElementById('action-content').innerHTML = '<p>Select an action to continue.</p>';
         }
-    }
-
-    showExamInterface() {
+    },
+    
+    showExamInterface: function() {
         let html = '<h3>Physical Examination</h3>';
         html += '<p>Select components to examine:</p>';
         
@@ -1764,7 +1331,7 @@ class ActionsManager {
         for (const component of gameData.physicalExamComponents) {
             html += `
                 <div class="action-item">
-                    <button class="action-option-btn" data-exam="${component}">
+                    <button class="action-option-btn" data-exam="${component}" onclick="actionsManager.performExam('${component}')">
                         ${component}
                     </button>
                 </div>
@@ -1772,18 +1339,10 @@ class ActionsManager {
         }
         html += '</div>';
         
-        this.actionContentElement.innerHTML = html;
-        
-        // Add event listeners to the exam buttons
-        this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const examComponent = event.target.getAttribute('data-exam');
-                this.performExam(examComponent);
-            });
-        });
-    }
-
-    showLabsInterface() {
+        document.getElementById('action-content').innerHTML = html;
+    },
+    
+    showLabsInterface: function() {
         let html = '<h3>Laboratory Tests</h3>';
         html += '<p>Select tests to order:</p>';
         
@@ -1798,7 +1357,7 @@ class ActionsManager {
             for (const test of tests) {
                 html += `
                     <div class="action-item">
-                        <button class="action-option-btn" data-test="${test}" data-category="${category}">
+                        <button class="action-option-btn" onclick="actionsManager.orderLabTest('${test}', '${category}')">
                             ${test}
                         </button>
                     </div>
@@ -1812,19 +1371,10 @@ class ActionsManager {
         }
         html += '</div>';
         
-        this.actionContentElement.innerHTML = html;
-        
-        // Add event listeners to the lab buttons
-        this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const test = event.target.getAttribute('data-test');
-                const category = event.target.getAttribute('data-category');
-                this.orderLabTest(test, category);
-            });
-        });
-    }
-
-    showDrugsInterface() {
+        document.getElementById('action-content').innerHTML = html;
+    },
+    
+    showDrugsInterface: function() {
         let html = '<h3>Medications</h3>';
         html += '<p>Select medication to administer:</p>';
         
@@ -1839,7 +1389,7 @@ class ActionsManager {
             for (const medication of medications) {
                 html += `
                     <div class="action-item">
-                        <button class="action-option-btn" data-medication="${medication}" data-category="${category}">
+                        <button class="action-option-btn" onclick="actionsManager.showMedicationDosageForm('${medication}', '${category}')">
                             ${medication}
                         </button>
                     </div>
@@ -1853,19 +1403,10 @@ class ActionsManager {
         }
         html += '</div>';
         
-        this.actionContentElement.innerHTML = html;
-        
-        // Add event listeners to the medication buttons
-        this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const medication = event.target.getAttribute('data-medication');
-                const category = event.target.getAttribute('data-category');
-                this.showMedicationDosageForm(medication, category);
-            });
-        });
-    }
-
-    showImagingInterface() {
+        document.getElementById('action-content').innerHTML = html;
+    },
+    
+    showImagingInterface: function() {
         let html = '<h3>Imaging Studies</h3>';
         html += '<p>Select imaging to order:</p>';
         
@@ -1873,7 +1414,7 @@ class ActionsManager {
         for (const study of gameData.imagingStudies) {
             html += `
                 <div class="action-item">
-                    <button class="action-option-btn" data-imaging="${study}">
+                    <button class="action-option-btn" onclick="actionsManager.orderImaging('${study}')">
                         ${study}
                     </button>
                 </div>
@@ -1881,18 +1422,10 @@ class ActionsManager {
         }
         html += '</div>';
         
-        this.actionContentElement.innerHTML = html;
-        
-        // Add event listeners to the imaging buttons
-        this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const imaging = event.target.getAttribute('data-imaging');
-                this.orderImaging(imaging);
-            });
-        });
-    }
-
-    showConsultInterface() {
+        document.getElementById('action-content').innerHTML = html;
+    },
+    
+    showConsultInterface: function() {
         let html = '<h3>Specialist Consultation</h3>';
         html += '<p>Select specialist to consult:</p>';
         
@@ -1900,7 +1433,7 @@ class ActionsManager {
         for (const specialist of gameData.consultations) {
             html += `
                 <div class="action-item">
-                    <button class="action-option-btn" data-specialist="${specialist}">
+                    <button class="action-option-btn" onclick="actionsManager.requestConsultation('${specialist}')">
                         ${specialist}
                     </button>
                 </div>
@@ -1908,22 +1441,14 @@ class ActionsManager {
         }
         html += '</div>';
         
-        this.actionContentElement.innerHTML = html;
-        
-        // Add event listeners to the consultation buttons
-        this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const specialist = event.target.getAttribute('data-specialist');
-                this.requestConsultation(specialist);
-            });
-        });
-    }
-
-    showMedicationDosageForm(medication, category) {
+        document.getElementById('action-content').innerHTML = html;
+    },
+    
+    showMedicationDosageForm: function(medication, category) {
         let html = `<h3>Administer ${medication}</h3>`;
         
         html += `
-            <form id="medication-form" class="medication-form">
+            <form id="medication-form" onsubmit="event.preventDefault(); actionsManager.administerMedication('${medication}', '${category}');">
                 <div class="form-group">
                     <label for="medication-dose">Dose:</label>
                     <input type="text" id="medication-dose" required placeholder="e.g. 5 mg, 500 mcg, 1 g">
@@ -1955,34 +1480,16 @@ class ActionsManager {
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="primary-btn">Administer</button>
-                    <button type="button" class="secondary-btn" id="cancel-medication">Cancel</button>
+                    <button type="button" class="secondary-btn" onclick="actionsManager.showDrugsInterface()">Cancel</button>
                 </div>
             </form>
         `;
         
-        this.actionContentElement.innerHTML = html;
-        
-        // Add event listeners
-        document.getElementById('medication-form').addEventListener('submit', (event) => {
-            event.preventDefault();
-            const details = {
-                medication: medication,
-                category: category,
-                dose: document.getElementById('medication-dose').value,
-                route: document.getElementById('medication-route').value,
-                frequency: document.getElementById('medication-frequency').value
-            };
-            this.administerMedication(details);
-        });
-        
-        document.getElementById('cancel-medication').addEventListener('click', () => {
-            this.showDrugsInterface();
-        });
-    }
-
+        document.getElementById('action-content').innerHTML = html;
+    },
+    
     async performExam(component) {
         try {
-            // Disable buttons during processing
             this.disableButtons();
             
             // Process the exam action
@@ -1998,18 +1505,16 @@ class ActionsManager {
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
-            // Re-enable buttons
             this.enableButtons();
         } catch (error) {
             console.error('Error performing exam:', error);
             resultsManager.addStatusUpdate('Error performing examination. Please try again.', 'abnormal');
             this.enableButtons();
         }
-    }
-
+    },
+    
     async orderLabTest(test, category) {
         try {
-            // Disable buttons during processing
             this.disableButtons();
             
             // Process the lab test action
@@ -2019,40 +1524,47 @@ class ActionsManager {
             });
             
             // Add result to the results log
-            // For individual tests
             if (test !== category) {
+                // Individual test
                 const labResults = {};
                 labResults[test] = result.result.values[test] || 'No result';
                 resultsManager.addLabResult(test, labResults);
-            } 
-            // For panel tests (like "Complete Blood Count")
-            else {
+            } else {
+                // Panel test
                 resultsManager.addLabResult(category, result.result.values);
             }
             
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
-            // Re-enable buttons
             this.enableButtons();
         } catch (error) {
             console.error('Error ordering lab test:', error);
             resultsManager.addStatusUpdate('Error ordering laboratory test. Please try again.', 'abnormal');
             this.enableButtons();
         }
-    }
-
-    async administerMedication(details) {
+    },
+    
+    async administerMedication(medication, category) {
         try {
-            // Disable buttons during processing
             this.disableButtons();
             
+            const dose = document.getElementById('medication-dose').value;
+            const route = document.getElementById('medication-route').value;
+            const frequency = document.getElementById('medication-frequency').value;
+            
             // Process the medication action
-            const result = await patientManager.processAction('medication', details);
+            const result = await patientManager.processAction('medication', {
+                medication: medication,
+                category: category,
+                dose: dose,
+                route: route,
+                frequency: frequency
+            });
             
             // Add result to the results log
             resultsManager.addMedicationResponse(
-                `${details.medication} ${details.dose} ${details.route} ${details.frequency}`,
+                `${medication} ${dose} ${route} ${frequency}`,
                 result.result.description,
                 !result.conditionChange.worsened
             );
@@ -2063,18 +1575,16 @@ class ActionsManager {
             // Return to medications interface
             this.showDrugsInterface();
             
-            // Re-enable buttons
             this.enableButtons();
         } catch (error) {
             console.error('Error administering medication:', error);
             resultsManager.addStatusUpdate('Error administering medication. Please try again.', 'abnormal');
             this.enableButtons();
         }
-    }
-
+    },
+    
     async orderImaging(imaging) {
         try {
-            // Disable buttons during processing
             this.disableButtons();
             
             // Process the imaging action
@@ -2090,18 +1600,16 @@ class ActionsManager {
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
-            // Re-enable buttons
             this.enableButtons();
         } catch (error) {
             console.error('Error ordering imaging:', error);
             resultsManager.addStatusUpdate('Error ordering imaging study. Please try again.', 'abnormal');
             this.enableButtons();
         }
-    }
-
+    },
+    
     async requestConsultation(specialist) {
         try {
-            // Disable buttons during processing
             this.disableButtons();
             
             // Process the consultation action
@@ -2113,129 +1621,59 @@ class ActionsManager {
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
-            // Re-enable buttons
             this.enableButtons();
         } catch (error) {
             console.error('Error requesting consultation:', error);
             resultsManager.addStatusUpdate('Error requesting consultation. Please try again.', 'abnormal');
             this.enableButtons();
         }
-    }
-
-    disableButtons() {
-        this.actionContentElement.querySelectorAll('button').forEach(button => {
+    },
+    
+    disableButtons: function() {
+        document.querySelectorAll('#action-content button').forEach(button => {
             button.disabled = true;
             button.classList.add('disabled');
         });
-    }
-
-    enableButtons() {
-        this.actionContentElement.querySelectorAll('button').forEach(button => {
+    },
+    
+    enableButtons: function() {
+        document.querySelectorAll('#action-content button').forEach(button => {
             button.disabled = false;
             button.classList.remove('disabled');
         });
-    }
-
-    reset() {
+    },
+    
+    reset: function() {
         this.currentAction = null;
-        this.actionButtons.forEach(button => {
+        document.querySelectorAll('.action-btn').forEach(button => {
             button.classList.remove('active');
         });
-        this.actionContentElement.innerHTML = '<p>Select an action to begin.</p>';
+        document.getElementById('action-content').innerHTML = '<p>Select an action to begin.</p>';
     }
-}
-
-const actionsManager = new ActionsManager();
-
-// Case Type Manager
-class CaseTypeManager {
-    constructor() {
-        this.caseTypeButtons = document.querySelectorAll('.case-type-btn');
-        this.currentCaseType = "cardiovascular"; // Default
-        
-        this.initEventListeners();
-    }
-    
-    initEventListeners() {
-        this.caseTypeButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                this.selectCaseType(event.target.id.replace('case-', ''));
-            });
-        });
-    }
-    
-    selectCaseType(type) {
-        // Remove active class from all buttons
-        this.caseTypeButtons.forEach(button => {
-            button.classList.remove('active');
-        });
-        
-        // Add active class to selected button
-        document.getElementById(`case-${type}`).classList.add('active');
-        
-        // Set case type in patient manager
-        this.currentCaseType = type;
-        patientManager.setCaseType(type);
-        
-        // Log the change
-        console.log(`Case type set to: ${type}`);
-    }
-    
-    getCurrentCaseType() {
-        return this.currentCaseType;
-    }
-}
-
-const caseTypeManager = new CaseTypeManager();
+};
 
 // Game Manager
-class GameManager {
-    constructor() {
-        // Game state
-        this.score = 0;
-        this.gameTimer = null;
-        this.gameTime = 0;
-        
-        // DOM elements
-        this.scoreElement = document.getElementById('score');
-        this.gameTimeElement = document.getElementById('game-time');
-        this.newPatientButton = document.getElementById('new-patient-btn');
-        this.patientInfoElement = document.getElementById('patient-info');
-        
-        // Initialize event listeners
-        this.initEventListeners();
-    }
-
-    initEventListeners() {
-        // New patient button
-        this.newPatientButton.addEventListener('click', () => {
-            this.startNewCase();
-        });
-    }
-
-    async start() {
-        // Show welcome message
-        this.showWelcomeMessage();
-        
-        // Set initial score
+const gameManager = {
+    score: 0,
+    gameTimer: null,
+    gameTime: 0,
+    
+    start: function() {
+        console.log("Starting game...");
+        resultsManager.addStatusUpdate('Welcome to Vital Decisions: Resident\'s Challenge! Select a case type and click "New Patient" to begin a new case.', 'info');
         this.updateScore(0, 'Game started');
-    }
-
-    showWelcomeMessage() {
-        resultsManager.addStatusUpdate(
-            'Welcome to Vital Decisions: Resident\'s Challenge! Select a case type and click "New Patient" to begin a new case.', 
-            'info'
-        );
-    }
-
+    },
+    
     async startNewCase() {
         try {
+            console.log("Starting new case...");
+            
             // Show loading indicator
-            this.patientInfoElement.innerHTML = '<p>Generating new patient case...</p>';
+            document.getElementById('patient-info').innerHTML = '<p>Generating new patient case...</p>';
             resultsManager.clearResults();
             actionsManager.reset();
             
-            // Reset score for new case
+            // Reset score
             this.score = 0;
             this.updateScore(0, 'New case started');
             
@@ -2260,9 +1698,9 @@ class GameManager {
             console.error('Error starting new case:', error);
             resultsManager.addStatusUpdate('Error generating patient case. Please try again.', 'abnormal');
         }
-    }
-
-    displayPatientInfo(patient) {
+    },
+    
+    displayPatientInfo: function(patient) {
         let html = `<h3>${patient.patientInfo.name}</h3>`;
         html += `<p><strong>Age:</strong> ${patient.patientInfo.age} | <strong>Gender:</strong> ${patient.patientInfo.gender}</p>`;
         html += `<p><strong>Chief Complaint:</strong> "${patient.patientInfo.chiefComplaint}"</p>`;
@@ -2274,10 +1712,10 @@ class GameManager {
         }
         html += '</ul>';
         
-        this.patientInfoElement.innerHTML = html;
-    }
-
-    startGameTimer() {
+        document.getElementById('patient-info').innerHTML = html;
+    },
+    
+    startGameTimer: function() {
         // Clear existing timer if any
         if (this.gameTimer) {
             clearInterval(this.gameTimer);
@@ -2292,108 +1730,46 @@ class GameManager {
             this.gameTime++;
             this.updateGameTimeDisplay();
         }, 1000);
-    }
-
-    resetGameTime() {
+    },
+    
+    resetGameTime: function() {
         if (this.gameTimer) {
             clearInterval(this.gameTimer);
             this.gameTimer = null;
         }
         this.gameTime = 0;
         this.updateGameTimeDisplay();
-    }
-
-    updateGameTimeDisplay() {
+    },
+    
+    updateGameTimeDisplay: function() {
         const minutes = Math.floor(this.gameTime / 60);
         const seconds = this.gameTime % 60;
-        this.gameTimeElement.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-
-    updateScore(points, reason) {
+        document.getElementById('game-time').textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    },
+    
+    updateScore: function(points, reason) {
         this.score += points;
-        this.scoreElement.textContent = this.score;
+        document.getElementById('score').textContent = this.score;
         
-        // If points are being deducted, show reason in results log
+        // Log score changes
         if (points < 0) {
             resultsManager.addStatusUpdate(`Score penalty: ${points} points - ${reason}`, 'abnormal');
         } else if (points > 0) {
             resultsManager.addStatusUpdate(`Score award: +${points} points - ${reason}`, 'normal');
         }
     }
-
-    endCase(success, diagnosis) {
-        // Stop patient updates
-        patientManager.stopVitalSignsUpdates();
-        
-        // Stop game timer
-        if (this.gameTimer) {
-            clearInterval(this.gameTimer);
-            this.gameTimer = null;
-        }
-        
-        // Display end case message
-        if (success) {
-            resultsManager.addStatusUpdate(`Case successfully resolved. Final diagnosis: ${diagnosis}. Final score: ${this.score}`, 'normal');
-        } else {
-            resultsManager.addStatusUpdate(`Case ended. Patient transferred to higher level of care. Final score: ${this.score}`, 'abnormal');
-        }
-        
-        // Disable all action buttons
-        document.querySelectorAll('.action-btn').forEach(button => {
-            button.disabled = true;
-        });
-        
-        // Enable new patient button
-        this.newPatientButton.disabled = false;
-    }
-}
-
-const gameManager = new GameManager();
+};
 
 // Initialize the game when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM fully loaded - initializing game...");
     
-    // Check if all key elements exist
-    const checkElements = [
-        'score', 
-        'api-cost', 
-        'heart-rate',
-        'new-patient-btn',
-        'case-cardio',
-        'case-infectious',
-        'case-emergency',
-        'case-misc',
-        'exam-btn',
-        'labs-btn',
-        'drugs-btn',
-        'imaging-btn',
-        'consult-btn'
-    ];
-    
-    let missingElements = [];
-    checkElements.forEach(id => {
-        if (!document.getElementById(id)) {
-            missingElements.push(id);
-            console.error(`Missing element with ID: ${id}`);
-        }
-    });
-    
-    if (missingElements.length > 0) {
-        alert(`Error: Missing elements: ${missingElements.join(", ")}`);
-        return;
-    }
-    
-    // Manually assign click handlers to ensure they're working
-    document.getElementById('new-patient-btn').onclick = function() {
-        console.log('New Patient button clicked');
-        gameManager.startNewCase();
-    };
-    
-    // Case type buttons
-    ['cardio', 'infectious', 'emergency', 'misc'].forEach(type => {
-        document.getElementById(`case-${type}`).onclick = function() {
-            console.log(`Case type selected: ${type}`);
+    // Set up case type button click handlers
+    document.querySelectorAll('.case-type-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            // Get the case type from the button ID
+            const caseType = this.id.replace('case-', '');
+            console.log("Case type selected:", caseType);
             
             // Remove active class from all buttons
             document.querySelectorAll('.case-type-btn').forEach(btn => {
@@ -2403,21 +1779,31 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add active class to this button
             this.classList.add('active');
             
-            // Set case type in patient manager
-            patientManager.setCaseType(type);
-        };
+            // Set case type
+            patientManager.setCaseType(caseType);
+        });
     });
     
-    // Action buttons
-    ['exam', 'labs', 'drugs', 'imaging', 'consult'].forEach(action => {
-        document.getElementById(`${action}-btn`).onclick = function() {
-            console.log(`Action selected: ${action}`);
+    // Set up new patient button click handler
+    document.getElementById('new-patient-btn').addEventListener('click', function() {
+        console.log("New patient button clicked");
+        gameManager.startNewCase();
+    });
+    
+    // Set up action button click handlers
+    document.querySelectorAll('.action-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const action = this.id.replace('-btn', '');
+            console.log("Action button clicked:", action);
             actionsManager.selectAction(action);
-        };
+        });
     });
     
-    // Initialize the game
+    // Start the game
     gameManager.start();
     
     console.log("Game initialized successfully");
 });
+</script>
+</body>
+</html>

@@ -1,4 +1,16 @@
-<!DOCTYPE html>
+disableButtons() {
+        this.actionContentElement.querySelectorAll('button').forEach(button => {
+            button.disabled = true;
+            button.classList.add('disabled');
+        });
+    }
+
+    enableButtons() {
+        this.actionContentElement.querySelectorAll('button').forEach(button => {
+            button.disabled = false;
+            button.classList.remove('disabled');
+        });
+    }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -322,6 +334,51 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+        
+        /* Case type indicator */
+        .case-type-indicator {
+            margin-top: 15px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            background-color: #f0f0f0;
+            display: inline-block;
+        }
+        
+        .case-type-indicator.cardiovascular {
+            background-color: #ffe0e0;
+            border-left: 4px solid #d32f2f;
+        }
+        
+        .case-type-indicator.infectious {
+            background-color: #e0ffe0;
+            border-left: 4px solid #388e3c;
+        }
+        
+        .case-type-indicator.emergency {
+            background-color: #fff0e0;
+            border-left: 4px solid #f57c00;
+        }
+        
+        .case-type-indicator.miscellaneous {
+            background-color: #e0f0ff;
+            border-left: 4px solid #1976d2;
+        }
+        
+        .case-type-indicator.random {
+            background-color: #f0f0f0;
+            border-left: 4px solid #757575;
+        }
+        
+        .case-type-label {
+            font-size: 0.9rem;
+            color: #555;
+        }
+        
+        .case-type-value {
+            font-size: 0.95rem;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -605,7 +662,7 @@ class ApiService {
     constructor() {
         this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
         this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "gtp-4o";
+        this.model = "claude-3.5-sonnet";
     }
 
     async sendRequest(messages) {
@@ -647,7 +704,30 @@ class ApiService {
     }
 
     async generatePatient(parameters = {}) {
+        const caseType = parameters.caseType || "random";
+        
+        // Generate condition prompt based on case type
+        let conditionPrompt = "";
+        switch(caseType) {
+            case "cardiovascular":
+                conditionPrompt = "Focus on cardiovascular conditions such as myocardial infarction, heart failure, arrhythmias, hypertensive crisis, aortic dissection, or valvular disorders.";
+                break;
+            case "infectious":
+                conditionPrompt = "Focus on infectious disease conditions such as pneumonia, sepsis, meningitis, cellulitis, urinary tract infection, endocarditis, or tropical diseases.";
+                break;
+            case "emergency":
+                conditionPrompt = "Focus on emergency medical conditions such as acute respiratory failure, stroke, pulmonary embolism, severe hemorrhage, status epilepticus, or toxicologic emergencies.";
+                break;
+            case "miscellaneous":
+                conditionPrompt = "Focus on other internal medicine conditions such as diabetes complications, thyroid disorders, liver disease, kidney disease, autoimmune disorders, or hematologic disorders.";
+                break;
+            default:
+                conditionPrompt = "Select any challenging but realistic internal medicine condition.";
+        }
+
         const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game for internal medicine residents. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. 
+
+${conditionPrompt}
 
 IMPORTANT: Your response must be a valid JSON object with NO additional text or explanation before or after the JSON, following this exact structure:
 
@@ -1167,7 +1247,7 @@ class ResultsManager {
         this.resultsLogElement.insertBefore(entryDiv, this.resultsLogElement.firstChild);
     }
 
-    addLabResult(labName, results) {
+    addLabResult(labName, results, interpretation = '') {
         // Convert results to HTML
         let contentHtml = '<table class="results-table">';
         
@@ -1181,7 +1261,10 @@ class ResultsManager {
         for (const [test, value] of Object.entries(results)) {
             if (gameData.labRanges[test]) {
                 const range = gameData.labRanges[test];
-                const isNormal = value >= range.min && value <= range.max;
+                const isNormal = typeof value === 'number' ? 
+                    (value >= range.min && value <= range.max) : 
+                    false;
+                
                 if (!isNormal) hasAbnormalResults = true;
                 
                 contentHtml += `
@@ -1203,6 +1286,11 @@ class ResultsManager {
         }
         
         contentHtml += '</table>';
+        
+        // Add interpretation if provided
+        if (interpretation) {
+            contentHtml += `<p><strong>Interpretation:</strong> ${interpretation}</p>`;
+        }
         
         // Add to results log
         this.addResultEntry(
@@ -1587,6 +1675,9 @@ class ActionsManager {
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
+            // Check if the patient is in a critical state that requires ending the case
+            this.checkForCriticalState(result);
+            
             // Re-enable buttons
             this.enableButtons();
         } catch (error) {
@@ -1611,16 +1702,53 @@ class ActionsManager {
             // For individual tests
             if (test !== category) {
                 const labResults = {};
-                labResults[test] = result.result.values[test] || 'No result';
-                resultsManager.addLabResult(test, labResults);
+                // Properly extract the test value from the result.result.values object
+                if (result.result.values && Object.keys(result.result.values).length > 0) {
+                    // Try to find the test value - check for test name in lowercase, camelCase, etc.
+                    const testKey = Object.keys(result.result.values).find(key => 
+                        key.toLowerCase() === test.toLowerCase() || 
+                        key.toLowerCase().replace(/\s+/g, '') === test.toLowerCase().replace(/\s+/g, '')
+                    );
+                    
+                    if (testKey) {
+                        labResults[test] = result.result.values[testKey];
+                    } else if (result.result.description && result.result.description.includes(':')) {
+                        // Try to extract value from description if it contains a value after colon
+                        const parts = result.result.description.split(':');
+                        if (parts.length > 1) {
+                            const valuePart = parts[1].trim();
+                            labResults[test] = valuePart;
+                        } else {
+                            labResults[test] = 'See interpretation';
+                        }
+                    } else {
+                        labResults[test] = 'See interpretation';
+                    }
+                } else if (result.result.description && result.result.description.includes(':')) {
+                    // Try to extract value from description
+                    const parts = result.result.description.split(':');
+                    if (parts.length > 1) {
+                        const valuePart = parts[1].trim();
+                        labResults[test] = valuePart;
+                    } else {
+                        labResults[test] = 'See interpretation';
+                    }
+                } else {
+                    labResults[test] = 'See interpretation';
+                }
+                
+                resultsManager.addLabResult(test, labResults, result.result.interpretation || '');
             } 
             // For panel tests (like "Complete Blood Count")
             else {
-                resultsManager.addLabResult(category, result.result.values);
+                resultsManager.addLabResult(category, result.result.values || {}, result.result.interpretation || '');
             }
             
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+            
+            // Check if the patient is in a critical state that requires ending the case
+            this.checkForCriticalState(result);
             
             // Re-enable buttons
             this.enableButtons();
@@ -1648,6 +1776,9 @@ class ActionsManager {
             
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+            
+            // Check if the patient is in a critical state that requires ending the case
+            this.checkForCriticalState(result);
             
             // Return to medications interface
             this.showDrugsInterface();
@@ -1679,6 +1810,9 @@ class ActionsManager {
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
+            // Check if the patient is in a critical state that requires ending the case
+            this.checkForCriticalState(result);
+            
             // Re-enable buttons
             this.enableButtons();
         } catch (error) {
@@ -1702,6 +1836,9 @@ class ActionsManager {
             // Update score
             gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
             
+            // Check if the patient is in a critical state that requires ending the case
+            this.checkForCriticalState(result);
+            
             // Re-enable buttons
             this.enableButtons();
         } catch (error) {
@@ -1711,18 +1848,74 @@ class ActionsManager {
         }
     }
 
-    disableButtons() {
-        this.actionContentElement.querySelectorAll('button').forEach(button => {
-            button.disabled = true;
-            button.classList.add('disabled');
-        });
+    checkForCriticalState(result) {
+        // Check for conditions that warrant ending the case
+        const isCriticalState = this.isCriticalState(result);
+        
+        if (isCriticalState) {
+            // Get the critical condition description
+            const description = result.conditionChange?.description || 'Patient in critical condition';
+            
+            // End the case as unsuccessful
+            gameManager.endCase(false, description);
+            
+            // Display critical alert
+            resultsManager.addStatusUpdate(`CRITICAL ALERT: ${description}`, 'abnormal');
+        }
     }
-
-    enableButtons() {
-        this.actionContentElement.querySelectorAll('button').forEach(button => {
-            button.disabled = false;
-            button.classList.remove('disabled');
-        });
+    
+    isCriticalState(result) {
+        // Check for death or cardiac arrest in the condition description
+        if (result.conditionChange && result.conditionChange.description) {
+            const desc = result.conditionChange.description.toLowerCase();
+            if (desc.includes('cardiac arrest') || 
+                desc.includes('death') || 
+                desc.includes('died') || 
+                desc.includes('fatal') ||
+                desc.includes('ventricular fibrillation') ||
+                desc.includes('asystole')) {
+                return true;
+            }
+        }
+        
+        // Check for critical vital signs
+        if (result.vitalSignsChange) {
+            // Check for respiratory arrest
+            if (result.vitalSignsChange.respiratoryRate !== null && 
+                result.vitalSignsChange.respiratoryRate <= 0) {
+                return true;
+            }
+            
+            // Check for no oxygen saturation
+            if (result.vitalSignsChange.oxygenSaturation !== null && 
+                result.vitalSignsChange.oxygenSaturation <= 0) {
+                return true;
+            }
+            
+            // Check for extreme low heart rate
+            if (result.vitalSignsChange.heartRate !== null && 
+                result.vitalSignsChange.heartRate < 20) {
+                return true;
+            }
+            
+            // Check for extreme low blood pressure
+            if (result.vitalSignsChange.bloodPressure && 
+                result.vitalSignsChange.bloodPressure.systolic !== null && 
+                result.vitalSignsChange.bloodPressure.systolic < 40) {
+                return true;
+            }
+        }
+        
+        // Check for specific values in the result that indicate critical state
+        if (result.result && result.result.values) {
+            if (result.result.values.cardiacArrest || 
+                result.result.values.respiratory_arrest ||
+                result.result.values.glasgowComaScale === 3) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     reset() {
@@ -1744,6 +1937,7 @@ class GameManager {
         this.apiCost = 0;
         this.gameTimer = null;
         this.gameTime = 0;
+        this.caseType = "random"; // Default to random case type
         
         // DOM elements
         this.scoreElement = document.getElementById('score');
@@ -1751,6 +1945,7 @@ class GameManager {
         this.gameTimeElement = document.getElementById('game-time');
         this.newPatientButton = document.getElementById('new-patient-btn');
         this.patientInfoElement = document.getElementById('patient-info');
+        this.caseTypeSelector = document.getElementById('case-type');
         
         // Initialize event listeners
         this.initEventListeners();
@@ -1760,6 +1955,12 @@ class GameManager {
         // New patient button
         this.newPatientButton.addEventListener('click', () => {
             this.startNewCase();
+        });
+        
+        // Case type selector
+        this.caseTypeSelector.addEventListener('change', (event) => {
+            this.caseType = event.target.value;
+            console.log(`Case type changed to: ${this.caseType}`);
         });
     }
 
@@ -1794,8 +1995,12 @@ class GameManager {
             // Reset game time
             this.resetGameTime();
             
-            // Generate new patient
-            const patient = await patientManager.generateNewPatient();
+            // Get the currently selected case type
+            const caseType = this.caseType;
+            resultsManager.addStatusUpdate(`Generating a new ${caseType} patient case...`, 'info');
+            
+            // Generate new patient with the selected case type
+            const patient = await patientManager.generateNewPatient({ caseType: caseType });
             
             // Display patient info
             this.displayPatientInfo(patient);
@@ -1826,7 +2031,23 @@ class GameManager {
         }
         html += '</ul>';
         
+        // Add case type indicator
+        html += `<div class="case-type-indicator ${this.caseType}">
+            <span class="case-type-label">Case Type: </span>
+            <span class="case-type-value">${this.formatCaseType(this.caseType)}</span>
+        </div>`;
+        
         this.patientInfoElement.innerHTML = html;
+    }
+    
+    formatCaseType(caseType) {
+        switch(caseType) {
+            case "cardiovascular": return "Cardiovascular";
+            case "infectious": return "Infectious Disease";
+            case "emergency": return "Emergency";
+            case "miscellaneous": return "Miscellaneous";
+            default: return "Random";
+        }
     }
 
     startGameTimer() {

@@ -38,6 +38,30 @@
             align-items: center;
             border-radius: 0 0 8px 8px;
         }
+        
+        .case-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .case-type-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .case-type-selector label {
+            font-weight: bold;
+            color: #444;
+        }
+        
+        .case-type-selector select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
 
         h1 {
             font-size: 1.8rem;
@@ -150,7 +174,12 @@
         }
 
         /* Additional elements */
-        .score-container {
+        .header-stats {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .score-container, .cost-container {
             font-size: 1.2rem;
             font-weight: bold;
             background-color: #004C94;
@@ -298,7 +327,10 @@
 <body>
     <header>
         <h1>Vital Decisions: Resident's Challenge</h1>
-        <div class="score-container">Score: <span id="score">0</span></div>
+        <div class="header-stats">
+            <div class="score-container">Score: <span id="score">0</span></div>
+            <div class="cost-container">API Cost: $<span id="api-cost">0.00</span></div>
+        </div>
     </header>
 
     <main class="game-container">
@@ -367,7 +399,19 @@
     </main>
 
     <footer>
-        <button id="new-patient-btn">New Patient</button>
+        <div class="case-controls">
+            <div class="case-type-selector">
+                <label for="case-type">Case Type:</label>
+                <select id="case-type">
+                    <option value="random">Random</option>
+                    <option value="cardiovascular">Cardiovascular</option>
+                    <option value="infectious">Infectious Disease</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="miscellaneous">Miscellaneous</option>
+                </select>
+            </div>
+            <button id="new-patient-btn">New Patient</button>
+        </div>
         <div class="time-display">
             <span id="game-time">00:00</span>
         </div>
@@ -576,6 +620,8 @@ class ApiService {
                 messages: messages
             };
 
+            console.log("Sending API request:", JSON.stringify(data));
+            
             const response = await fetch(this.url, {
                 method: 'POST',
                 headers: headers,
@@ -583,10 +629,16 @@ class ApiService {
             });
 
             if (!response.ok) {
+                console.error(`API error: ${response.status} ${response.statusText}`);
+                console.error("Response:", await response.text());
                 throw new Error(`API error: ${response.status} ${response.statusText}`);
             }
 
+            // Track API usage cost - $0.06 per API call
+            gameManager.updateApiCost(0.06);
+
             const responseData = await response.json();
+            console.log("API response:", responseData);
             return responseData;
         } catch (error) {
             console.error('API Request Error:', error);
@@ -595,35 +647,43 @@ class ApiService {
     }
 
     async generatePatient(parameters = {}) {
-        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. Format the response as a JSON object with the following structure:
-        {
-            "patientInfo": {
-                "name": "Patient's name",
-                "age": age,
-                "gender": "gender",
-                "medicalHistory": ["relevant history points"],
-                "chiefComplaint": "chief complaint"
-            },
-            "vitalSigns": {
-                "heartRate": number,
-                "bloodPressure": {
-                    "systolic": number,
-                    "diastolic": number
-                },
-                "respiratoryRate": number,
-                "temperature": number (in Celsius),
-                "oxygenSaturation": number (percentage)
-            },
-            "condition": {
-                "name": "actual medical condition",
-                "severity": "mild/moderate/severe",
-                "duration": "time since onset"
-            }
-        }
-        
-        Ensure the vital signs are realistic and consistent with the condition. Focus on internal medicine conditions at a level appropriate for a resident physician. Make the case challenging but diagnosable with appropriate history, physical findings, and relevant tests.`;
+        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game for internal medicine residents. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. 
 
-        const userPrompt = `Generate a new patient case with the following parameters: ${JSON.stringify(parameters)}. Make sure all vitals and findings are consistent with the underlying condition but do not make the diagnosis too obvious.`;
+IMPORTANT: Your response must be a valid JSON object with NO additional text or explanation before or after the JSON, following this exact structure:
+
+{
+    "patientInfo": {
+        "name": "Patient's name",
+        "age": age,
+        "gender": "gender",
+        "medicalHistory": ["relevant history points"],
+        "chiefComplaint": "chief complaint"
+    },
+    "vitalSigns": {
+        "heartRate": number,
+        "bloodPressure": {
+            "systolic": number,
+            "diastolic": number
+        },
+        "respiratoryRate": number,
+        "temperature": number (in Celsius),
+        "oxygenSaturation": number (percentage)
+    },
+    "condition": {
+        "name": "actual medical condition",
+        "severity": "mild/moderate/severe",
+        "duration": "time since onset"
+    }
+}
+        
+Ensure the vital signs are medically accurate and physiologically consistent with the condition. Examples:
+- Patients with sepsis: elevated heart rate, fever, lower blood pressure
+- Patients with heart failure: elevated heart rate and respiratory rate
+- Patients with COPD exacerbation: decreased oxygen saturation and increased respiratory rate
+
+Focus on realistic internal medicine conditions appropriate for a resident physician.`;
+
+        const userPrompt = `Generate a new patient case. Make all vitals and findings consistent with the underlying condition but not too obvious. RESPOND ONLY WITH THE JSON OBJECT, NO OTHER TEXT.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -635,51 +695,95 @@ class ApiService {
         try {
             // Extract JSON from the response
             const responseContent = response.choices[0].message.content;
-            const patientData = JSON.parse(responseContent);
-            return patientData;
+            console.log("Raw patient data response:", responseContent);
+            
+            // Try to extract only the JSON part
+            let jsonStr = responseContent.trim();
+            
+            // If there are backticks or other markdown code formatting, remove them
+            if (jsonStr.includes("```json")) {
+                jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+            } else if (jsonStr.includes("```")) {
+                jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+            }
+            
+            // Find the outermost JSON object
+            const firstBrace = jsonStr.indexOf('{');
+            const lastBrace = jsonStr.lastIndexOf('}');
+            
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+                console.log("Extracted JSON string:", jsonStr);
+                
+                // Parse the JSON
+                try {
+                    const patientData = JSON.parse(jsonStr);
+                    return patientData;
+                } catch (parseError) {
+                    console.error("JSON parse error:", parseError);
+                    console.error("JSON string that failed to parse:", jsonStr);
+                    throw parseError;
+                }
+            } else {
+                throw new Error("Could not find valid JSON object in response");
+            }
         } catch (error) {
             console.error('Error parsing patient data:', error);
+            console.error('Response content:', response.choices[0].message.content);
             throw new Error('Failed to generate patient data');
         }
     }
 
     async processAction(patientData, action, actionDetails) {
-        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game. Respond with realistic clinical outcomes based on the patient's condition and the action taken. Format your response as a JSON object with:
-        {
-            "result": {
-                "description": "Detailed description of findings or results",
-                "interpretation": "Brief medical interpretation when relevant",
-                "values": {object with any relevant numeric values or findings}
-            },
-            "vitalSignsChange": {
-                "heartRate": number or null (if no change),
-                "bloodPressure": {
-                    "systolic": number or null,
-                    "diastolic": number or null
-                },
-                "respiratoryRate": number or null,
-                "temperature": number or null,
-                "oxygenSaturation": number or null
-            },
-            "conditionChange": {
-                "improved": boolean,
-                "worsened": boolean,
-                "description": "Description of any change in condition"
-            },
-            "scoringImpact": {
-                "points": number (negative for mistakes, 0 for neutral actions),
-                "explanation": "Brief explanation of scoring impact"
-            }
-        }
+        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game for internal medicine residents. Respond with realistic clinical outcomes based on the patient's condition and the action taken. 
+
+IMPORTANT: Your response must be a valid JSON object with NO additional text or explanation before or after the JSON, following this exact structure:
+
+{
+    "result": {
+        "description": "Detailed description of findings or results",
+        "interpretation": "Brief medical interpretation when relevant",
+        "values": {object with any relevant numeric values or findings}
+    },
+    "vitalSignsChange": {
+        "heartRate": number or null (if no change),
+        "bloodPressure": {
+            "systolic": number or null,
+            "diastolic": number or null
+        },
+        "respiratoryRate": number or null,
+        "temperature": number or null,
+        "oxygenSaturation": number or null
+    },
+    "conditionChange": {
+        "improved": boolean,
+        "worsened": boolean,
+        "description": "Description of any change in condition"
+    },
+    "scoringImpact": {
+        "points": number (negative for mistakes, 0 for neutral actions),
+        "explanation": "Brief explanation of scoring impact"
+    }
+}
         
-        Make the responses medically accurate and consistent with what would be expected in a real patient with the given condition.`;
+Make the responses medically accurate and physiologically consistent. For example:
+        
+1. Medications should affect appropriate vital signs:
+   - Beta blockers like metoprolol should reduce both heart rate AND blood pressure
+   - Vasopressors should increase blood pressure
+   - Antipyretics should reduce temperature in febrile patients
+   - Bronchodilators should improve respiratory rate and oxygen saturation in patients with bronchospasm
+        
+2. The magnitude of effect should be dose-dependent and realistic.
+3. Patient condition should impact medication response.
+4. Timing matters (IV medications have more immediate effects than oral).`;
 
         const userPrompt = `Current patient: ${JSON.stringify(patientData)}
         
-        Player action: ${action}
-        Action details: ${JSON.stringify(actionDetails)}
-        
-        Provide a realistic response to this action, including any changes to vital signs, condition status, and impact on scoring.`;
+Player action: ${action}
+Action details: ${JSON.stringify(actionDetails)}
+
+Provide a realistic response to this action. RESPOND ONLY WITH THE JSON OBJECT, NO OTHER TEXT.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -691,10 +795,41 @@ class ApiService {
         try {
             // Extract JSON from the response
             const responseContent = response.choices[0].message.content;
-            const actionResult = JSON.parse(responseContent);
-            return actionResult;
+            console.log("Raw action result response:", responseContent);
+            
+            // Try to extract only the JSON part
+            let jsonStr = responseContent.trim();
+            
+            // If there are backticks or other markdown code formatting, remove them
+            if (jsonStr.includes("```json")) {
+                jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+            } else if (jsonStr.includes("```")) {
+                jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+            }
+            
+            // Find the outermost JSON object
+            const firstBrace = jsonStr.indexOf('{');
+            const lastBrace = jsonStr.lastIndexOf('}');
+            
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+                console.log("Extracted JSON string:", jsonStr);
+                
+                // Parse the JSON
+                try {
+                    const actionResult = JSON.parse(jsonStr);
+                    return actionResult;
+                } catch (parseError) {
+                    console.error("JSON parse error:", parseError);
+                    console.error("JSON string that failed to parse:", jsonStr);
+                    throw parseError;
+                }
+            } else {
+                throw new Error("Could not find valid JSON object in response");
+            }
         } catch (error) {
             console.error('Error parsing action result:', error);
+            console.error('Response content:', response.choices[0].message.content);
             throw new Error('Failed to process action');
         }
     }
@@ -868,6 +1003,13 @@ class Patient {
         
         if (changes.oxygenSaturation !== null && changes.oxygenSaturation !== undefined) {
             this.data.vitalSigns.oxygenSaturation = changes.oxygenSaturation;
+        }
+        
+        // Calculate MAP from current blood pressure values
+        if (this.data.vitalSigns.bloodPressure) {
+            const systolic = this.data.vitalSigns.bloodPressure.systolic;
+            const diastolic = this.data.vitalSigns.bloodPressure.diastolic;
+            this.data.vitalSigns.meanArterialPressure = Math.round((diastolic * 2 + systolic) / 3);
         }
         
         // Record the updated vitals after changes
@@ -1599,11 +1741,13 @@ class GameManager {
     constructor() {
         // Game state
         this.score = 0;
+        this.apiCost = 0;
         this.gameTimer = null;
         this.gameTime = 0;
         
         // DOM elements
         this.scoreElement = document.getElementById('score');
+        this.apiCostElement = document.getElementById('api-cost');
         this.gameTimeElement = document.getElementById('game-time');
         this.newPatientButton = document.getElementById('new-patient-btn');
         this.patientInfoElement = document.getElementById('patient-info');
@@ -1644,6 +1788,8 @@ class GameManager {
             // Reset score for new case
             this.score = 0;
             this.updateScore(0, 'New case started');
+            
+            // Note: We don't reset the API cost - it accumulates across games
             
             // Reset game time
             this.resetGameTime();
@@ -1723,6 +1869,11 @@ class GameManager {
         if (points < 0) {
             resultsManager.addStatusUpdate(`Score penalty: ${points} points - ${reason}`, 'abnormal');
         }
+    }
+    
+    updateApiCost(cost) {
+        this.apiCost += cost;
+        this.apiCostElement.textContent = this.apiCost.toFixed(2);
     }
 
     endCase(success, diagnosis) {

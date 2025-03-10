@@ -569,7 +569,7 @@ class ApiService {
     constructor() {
         this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
         this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "claude-3.5-sonnet";
+        this.model = "gtp-4o";
     }
 
     async sendRequest(messages) {
@@ -611,42 +611,43 @@ class ApiService {
     }
 
     async generatePatient(parameters = {}) {
-        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game for internal medicine residents. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. Format the response as a JSON object with the following structure:
-        {
-            "patientInfo": {
-                "name": "Patient's name",
-                "age": age,
-                "gender": "gender",
-                "medicalHistory": ["relevant history points"],
-                "chiefComplaint": "chief complaint"
-            },
-            "vitalSigns": {
-                "heartRate": number,
-                "bloodPressure": {
-                    "systolic": number,
-                    "diastolic": number
-                },
-                "respiratoryRate": number,
-                "temperature": number (in Celsius),
-                "oxygenSaturation": number (percentage)
-            },
-            "condition": {
-                "name": "actual medical condition",
-                "severity": "mild/moderate/severe",
-                "duration": "time since onset"
-            }
-        }
-        
-        Ensure the vital signs are medically accurate and physiologically consistent with the condition. For example:
-        - Patients with sepsis might have elevated heart rate, fever, and lower blood pressure
-        - Patients with heart failure might have elevated heart rate and respiratory rate
-        - Patients with COPD exacerbation might have decreased oxygen saturation and increased respiratory rate
-        
-        The MAP (Mean Arterial Pressure) will be calculated as (2*diastolic + systolic)/3, so ensure the blood pressure values make clinical sense.
-        
-        Focus on realistic internal medicine conditions at a level appropriate for a resident physician. Make the case challenging but diagnosable with appropriate history, physical findings, and relevant tests.`;
+        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game for internal medicine residents. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. 
 
-        const userPrompt = `Generate a new patient case with the following parameters: ${JSON.stringify(parameters)}. Make sure all vitals and findings are consistent with the underlying condition but do not make the diagnosis too obvious. Respond with ONLY the JSON object, no other text.`;
+IMPORTANT: Your response must be a valid JSON object with NO additional text or explanation before or after the JSON, following this exact structure:
+
+{
+    "patientInfo": {
+        "name": "Patient's name",
+        "age": age,
+        "gender": "gender",
+        "medicalHistory": ["relevant history points"],
+        "chiefComplaint": "chief complaint"
+    },
+    "vitalSigns": {
+        "heartRate": number,
+        "bloodPressure": {
+            "systolic": number,
+            "diastolic": number
+        },
+        "respiratoryRate": number,
+        "temperature": number (in Celsius),
+        "oxygenSaturation": number (percentage)
+    },
+    "condition": {
+        "name": "actual medical condition",
+        "severity": "mild/moderate/severe",
+        "duration": "time since onset"
+    }
+}
+        
+Ensure the vital signs are medically accurate and physiologically consistent with the condition. Examples:
+- Patients with sepsis: elevated heart rate, fever, lower blood pressure
+- Patients with heart failure: elevated heart rate and respiratory rate
+- Patients with COPD exacerbation: decreased oxygen saturation and increased respiratory rate
+
+Focus on realistic internal medicine conditions appropriate for a resident physician.`;
+
+        const userPrompt = `Generate a new patient case. Make all vitals and findings consistent with the underlying condition but not too obvious. RESPOND ONLY WITH THE JSON OBJECT, NO OTHER TEXT.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -660,17 +661,35 @@ class ApiService {
             const responseContent = response.choices[0].message.content;
             console.log("Raw patient data response:", responseContent);
             
-            // Try to find valid JSON in the response
-            let jsonStart = responseContent.indexOf('{');
-            let jsonEnd = responseContent.lastIndexOf('}');
+            // Try to extract only the JSON part
+            let jsonStr = responseContent.trim();
             
-            if (jsonStart >= 0 && jsonEnd >= 0) {
-                const jsonStr = responseContent.substring(jsonStart, jsonEnd + 1);
+            // If there are backticks or other markdown code formatting, remove them
+            if (jsonStr.includes("```json")) {
+                jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+            } else if (jsonStr.includes("```")) {
+                jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+            }
+            
+            // Find the outermost JSON object
+            const firstBrace = jsonStr.indexOf('{');
+            const lastBrace = jsonStr.lastIndexOf('}');
+            
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
                 console.log("Extracted JSON string:", jsonStr);
-                const patientData = JSON.parse(jsonStr);
-                return patientData;
+                
+                // Parse the JSON
+                try {
+                    const patientData = JSON.parse(jsonStr);
+                    return patientData;
+                } catch (parseError) {
+                    console.error("JSON parse error:", parseError);
+                    console.error("JSON string that failed to parse:", jsonStr);
+                    throw parseError;
+                }
             } else {
-                throw new Error("Could not find valid JSON in response");
+                throw new Error("Could not find valid JSON object in response");
             }
         } catch (error) {
             console.error('Error parsing patient data:', error);
@@ -680,64 +699,55 @@ class ApiService {
     }
 
     async processAction(patientData, action, actionDetails) {
-        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game for internal medicine residents. Respond with realistic clinical outcomes based on the patient's condition and the action taken. Format your response as a JSON object with:
-        {
-            "result": {
-                "description": "Detailed description of findings or results",
-                "interpretation": "Brief medical interpretation when relevant",
-                "values": {object with any relevant numeric values or findings}
-            },
-            "vitalSignsChange": {
-                "heartRate": number or null (if no change),
-                "bloodPressure": {
-                    "systolic": number or null,
-                    "diastolic": number or null
-                },
-                "respiratoryRate": number or null,
-                "temperature": number or null,
-                "oxygenSaturation": number or null
-            },
-            "conditionChange": {
-                "improved": boolean,
-                "worsened": boolean,
-                "description": "Description of any change in condition"
-            },
-            "scoringImpact": {
-                "points": number (negative for mistakes, 0 for neutral actions),
-                "explanation": "Brief explanation of scoring impact"
-            }
-        }
+        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game for internal medicine residents. Respond with realistic clinical outcomes based on the patient's condition and the action taken. 
+
+IMPORTANT: Your response must be a valid JSON object with NO additional text or explanation before or after the JSON, following this exact structure:
+
+{
+    "result": {
+        "description": "Detailed description of findings or results",
+        "interpretation": "Brief medical interpretation when relevant",
+        "values": {object with any relevant numeric values or findings}
+    },
+    "vitalSignsChange": {
+        "heartRate": number or null (if no change),
+        "bloodPressure": {
+            "systolic": number or null,
+            "diastolic": number or null
+        },
+        "respiratoryRate": number or null,
+        "temperature": number or null,
+        "oxygenSaturation": number or null
+    },
+    "conditionChange": {
+        "improved": boolean,
+        "worsened": boolean,
+        "description": "Description of any change in condition"
+    },
+    "scoringImpact": {
+        "points": number (negative for mistakes, 0 for neutral actions),
+        "explanation": "Brief explanation of scoring impact"
+    }
+}
         
-        Make the responses medically accurate and physiologically consistent. For example:
+Make the responses medically accurate and physiologically consistent. For example:
         
-        1. Medications should affect appropriate vital signs:
-           - Beta blockers like metoprolol should reduce both heart rate AND blood pressure
-           - Vasopressors should increase blood pressure
-           - Antipyretics should reduce temperature in febrile patients
-           - Bronchodilators should improve respiratory rate and oxygen saturation in patients with bronchospasm
+1. Medications should affect appropriate vital signs:
+   - Beta blockers like metoprolol should reduce both heart rate AND blood pressure
+   - Vasopressors should increase blood pressure
+   - Antipyretics should reduce temperature in febrile patients
+   - Bronchodilators should improve respiratory rate and oxygen saturation in patients with bronchospasm
         
-        2. The magnitude of effect should be dose-dependent and realistic:
-           - Normal doses should have moderate effects
-           - High doses should have stronger effects (and possibly side effects)
-           - Very high doses should potentially cause adverse effects
-        
-        3. Patient condition should impact medication response:
-           - Patients with severe hypertension might be less responsive to a single dose of antihypertensive
-           - Patients with septic shock might require higher doses of vasopressors
-           - Patients with severe asthma might require multiple treatments
-        
-        4. Timing matters:
-           - Effects of IV medications should be more immediate
-           - Effects of oral medications should be more gradual
-        
-        Be specific with laboratory findings and ensure all vital sign changes are physiologically consistent with each other.`;
+2. The magnitude of effect should be dose-dependent and realistic.
+3. Patient condition should impact medication response.
+4. Timing matters (IV medications have more immediate effects than oral).`;
 
         const userPrompt = `Current patient: ${JSON.stringify(patientData)}
         
-        Player action: ${action}
-        Action details: ${JSON.stringify(actionDetails)}
-        
-        Provide a realistic response to this action, including any changes to vital signs, condition status, and impact on scoring. Respond with ONLY the JSON object, no other text.`;
+Player action: ${action}
+Action details: ${JSON.stringify(actionDetails)}
+
+Provide a realistic response to this action. RESPOND ONLY WITH THE JSON OBJECT, NO OTHER TEXT.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -751,17 +761,35 @@ class ApiService {
             const responseContent = response.choices[0].message.content;
             console.log("Raw action result response:", responseContent);
             
-            // Try to find valid JSON in the response
-            let jsonStart = responseContent.indexOf('{');
-            let jsonEnd = responseContent.lastIndexOf('}');
+            // Try to extract only the JSON part
+            let jsonStr = responseContent.trim();
             
-            if (jsonStart >= 0 && jsonEnd >= 0) {
-                const jsonStr = responseContent.substring(jsonStart, jsonEnd + 1);
+            // If there are backticks or other markdown code formatting, remove them
+            if (jsonStr.includes("```json")) {
+                jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+            } else if (jsonStr.includes("```")) {
+                jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+            }
+            
+            // Find the outermost JSON object
+            const firstBrace = jsonStr.indexOf('{');
+            const lastBrace = jsonStr.lastIndexOf('}');
+            
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
                 console.log("Extracted JSON string:", jsonStr);
-                const actionResult = JSON.parse(jsonStr);
-                return actionResult;
+                
+                // Parse the JSON
+                try {
+                    const actionResult = JSON.parse(jsonStr);
+                    return actionResult;
+                } catch (parseError) {
+                    console.error("JSON parse error:", parseError);
+                    console.error("JSON string that failed to parse:", jsonStr);
+                    throw parseError;
+                }
             } else {
-                throw new Error("Could not find valid JSON in response");
+                throw new Error("Could not find valid JSON object in response");
             }
         } catch (error) {
             console.error('Error parsing action result:', error);

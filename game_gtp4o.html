@@ -305,7 +305,7 @@
         <h1>Vital Decisions: Resident's Challenge</h1>
         <div class="header-stats">
             <div class="score-container">Score: <span id="score">0</span></div>
-            <div class="cost-container">API Cost: $<span id="api-cost">0.00</span></div>
+            <div class="cost-container"> Cost: $<span id="-cost">0.00</span></div>
         </div>
     </header>
 
@@ -569,7 +569,7 @@ class ApiService {
     constructor() {
         this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
         this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "gtp-4o";
+        this.model = "gpt-4o";
     }
 
     async sendRequest(messages) {

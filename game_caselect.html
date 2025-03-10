@@ -379,6 +379,39 @@ disableButtons() {
             font-size: 0.95rem;
             color: #333;
         }
+        
+        /* Case ended notice */
+        .case-ended-notice {
+            background-color: #f8f8f8;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 0 auto;
+            border: 2px dashed #ccc;
+        }
+        
+        .case-ended-notice h3 {
+            margin-top: 0;
+            color: #d32f2f;
+        }
+        
+        /* Critical alert styles */
+        .critical-alert {
+            background-color: #ffebee;
+            border: 2px solid #d32f2f;
+            color: #b71c1c;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+        }
     </style>
 </head>
 <body>
@@ -662,7 +695,7 @@ class ApiService {
     constructor() {
         this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
         this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "gpt-4o";
+        this.model = "claude-3.5-sonnet";
     }
 
     async sendRequest(messages) {
@@ -998,12 +1031,22 @@ class Patient {
         const currentVitals = { ...this.data.vitalSigns };
         
         // Apply small random variations to vitals to simulate natural changes
-        currentVitals.heartRate = this.addVariation(currentVitals.heartRate, 5);
-        currentVitals.bloodPressure.systolic = this.addVariation(currentVitals.bloodPressure.systolic, 5);
-        currentVitals.bloodPressure.diastolic = this.addVariation(currentVitals.bloodPressure.diastolic, 3);
-        currentVitals.respiratoryRate = this.addVariation(currentVitals.respiratoryRate, 2);
-        currentVitals.temperature = this.addVariation(currentVitals.temperature, 0.2);
-        currentVitals.oxygenSaturation = Math.min(100, this.addVariation(currentVitals.oxygenSaturation, 1));
+        currentVitals.heartRate = this.addVariation(currentVitals.heartRate, 2);
+        currentVitals.bloodPressure.systolic = this.addVariation(currentVitals.bloodPressure.systolic, 3);
+        currentVitals.bloodPressure.diastolic = this.addVariation(currentVitals.bloodPressure.diastolic, 2);
+        currentVitals.respiratoryRate = this.addVariation(currentVitals.respiratoryRate, 1);
+        currentVitals.temperature = this.addVariation(currentVitals.temperature, 0.1);
+        currentVitals.oxygenSaturation = Math.min(100, this.addVariation(currentVitals.oxygenSaturation, 0.5));
+        
+        // Calculate MAP from current blood pressure values
+        if (currentVitals.bloodPressure) {
+            const systolic = currentVitals.bloodPressure.systolic;
+            const diastolic = currentVitals.bloodPressure.diastolic;
+            currentVitals.meanArterialPressure = Math.round((diastolic * 2 + systolic) / 3);
+        }
+        
+        // Make sure values stay in reasonable physiological ranges
+        this.enforcePhysiologicalLimits(currentVitals);
         
         // Update the current vitals
         this.data.vitalSigns = currentVitals;
@@ -1013,6 +1056,24 @@ class Patient {
         
         // Trigger an event to update the UI
         document.dispatchEvent(new CustomEvent('vitalsUpdated', { detail: currentVitals }));
+    }
+    
+    enforcePhysiologicalLimits(vitals) {
+        // Ensure heart rate stays within physiological limits
+        vitals.heartRate = Math.max(30, Math.min(220, vitals.heartRate));
+        
+        // Ensure blood pressure stays within physiological limits
+        vitals.bloodPressure.systolic = Math.max(50, Math.min(250, vitals.bloodPressure.systolic));
+        vitals.bloodPressure.diastolic = Math.max(30, Math.min(150, vitals.bloodPressure.diastolic));
+        
+        // Ensure respiratory rate stays within physiological limits
+        vitals.respiratoryRate = Math.max(6, Math.min(40, vitals.respiratoryRate));
+        
+        // Ensure temperature stays within physiological limits
+        vitals.temperature = Math.max(32, Math.min(42, vitals.temperature));
+        
+        // Ensure oxygen saturation stays within physiological limits
+        vitals.oxygenSaturation = Math.max(60, Math.min(100, vitals.oxygenSaturation));
     }
 
     addVariation(value, maxChange) {
@@ -1338,12 +1399,26 @@ class ResultsManager {
     }
 
     addStatusUpdate(update, status = 'info') {
-        this.addResultEntry(
-            'Status Update', 
-            'Patient Condition', 
-            `<p>${update}</p>`, 
-            status
-        );
+        // For critical alerts, add special styling
+        if (update.toLowerCase().includes('critical') || 
+            update.toLowerCase().includes('emergency') || 
+            update.toLowerCase().includes('cardiac arrest') ||
+            update.toLowerCase().includes('immediate')) {
+            
+            this.addResultEntry(
+                'Status Update', 
+                'CRITICAL ALERT', 
+                `<div class="critical-alert">${update}</div>`, 
+                'abnormal'
+            );
+        } else {
+            this.addResultEntry(
+                'Status Update', 
+                'Patient Condition', 
+                `<p>${update}</p>`, 
+                status
+            );
+        }
     }
 
     formatGameTime(seconds) {
@@ -1452,10 +1527,11 @@ class ActionsManager {
         this.actionContentElement.innerHTML = html;
         
         // Add event listeners to the exam buttons
+        const self = this; // Store reference to 'this' to use in the event handler
         this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const examComponent = event.target.getAttribute('data-exam');
-                this.performExam(examComponent);
+            button.addEventListener('click', function(event) {
+                const examComponent = this.getAttribute('data-exam');
+                self.performExam(examComponent);
             });
         });
     }
@@ -1492,11 +1568,12 @@ class ActionsManager {
         this.actionContentElement.innerHTML = html;
         
         // Add event listeners to the lab buttons
+        const self = this; // Store reference to 'this' to use in the event handler
         this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const test = event.target.getAttribute('data-test');
-                const category = event.target.getAttribute('data-category');
-                this.orderLabTest(test, category);
+            button.addEventListener('click', function(event) {
+                const test = this.getAttribute('data-test');
+                const category = this.getAttribute('data-category');
+                self.orderLabTest(test, category);
             });
         });
     }
@@ -1533,11 +1610,12 @@ class ActionsManager {
         this.actionContentElement.innerHTML = html;
         
         // Add event listeners to the medication buttons
+        const self = this; // Store reference to 'this' to use in the event handler
         this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const medication = event.target.getAttribute('data-medication');
-                const category = event.target.getAttribute('data-category');
-                this.showMedicationDosageForm(medication, category);
+            button.addEventListener('click', function(event) {
+                const medication = this.getAttribute('data-medication');
+                const category = this.getAttribute('data-category');
+                self.showMedicationDosageForm(medication, category);
             });
         });
     }
@@ -1561,10 +1639,11 @@ class ActionsManager {
         this.actionContentElement.innerHTML = html;
         
         // Add event listeners to the imaging buttons
+        const self = this; // Store reference to 'this' to use in the event handler
         this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const imaging = event.target.getAttribute('data-imaging');
-                this.orderImaging(imaging);
+            button.addEventListener('click', function(event) {
+                const imaging = this.getAttribute('data-imaging');
+                self.orderImaging(imaging);
             });
         });
     }
@@ -1588,10 +1667,11 @@ class ActionsManager {
         this.actionContentElement.innerHTML = html;
         
         // Add event listeners to the consultation buttons
+        const self = this; // Store reference to 'this' to use in the event handler
         this.actionContentElement.querySelectorAll('.action-option-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const specialist = event.target.getAttribute('data-specialist');
-                this.requestConsultation(specialist);
+            button.addEventListener('click', function(event) {
+                const specialist = this.getAttribute('data-specialist');
+                self.requestConsultation(specialist);
             });
         });
     }
@@ -1640,7 +1720,8 @@ class ActionsManager {
         this.actionContentElement.innerHTML = html;
         
         // Add event listeners
-        document.getElementById('medication-form').addEventListener('submit', (event) => {
+        const self = this;
+        document.getElementById('medication-form').addEventListener('submit', function(event) {
             event.preventDefault();
             const details = {
                 medication: medication,
@@ -1649,11 +1730,11 @@ class ActionsManager {
                 route: document.getElementById('medication-route').value,
                 frequency: document.getElementById('medication-frequency').value
             };
-            this.administerMedication(details);
+            self.administerMedication(details);
         });
         
-        document.getElementById('cancel-medication').addEventListener('click', () => {
-            this.showDrugsInterface();
+        document.getElementById('cancel-medication').addEventListener('click', function() {
+            self.showDrugsInterface();
         });
     }
 
@@ -1689,7 +1770,7 @@ class ActionsManager {
 
     async orderLabTest(test, category) {
         try {
-            // Disable buttons during processing
+            // Disable buttons while processing
             this.disableButtons();
             
             // Process the lab test action
@@ -2111,13 +2192,24 @@ class GameManager {
         if (success) {
             resultsManager.addStatusUpdate(`Case successfully resolved. Final diagnosis: ${diagnosis}. Final score: ${this.score}`, 'normal');
         } else {
-            resultsManager.addStatusUpdate(`Case ended. Patient transferred to higher level of care. Final score: ${this.score}`, 'abnormal');
+            // For unsuccessful cases, diagnosis contains the reason for failure
+            resultsManager.addStatusUpdate(`Case ended. ${diagnosis}. Final score: ${this.score}`, 'abnormal');
         }
         
         // Disable all action buttons
         document.querySelectorAll('.action-btn').forEach(button => {
             button.disabled = true;
+            button.classList.add('disabled');
         });
+        
+        // Clear action content
+        document.getElementById('action-content').innerHTML = `
+            <div class="case-ended-notice">
+                <h3>Case Ended</h3>
+                <p>${success ? 'Case successfully resolved!' : 'Patient care transferred to critical care team.'}</p>
+                <p>Click "New Patient" to start a new case.</p>
+            </div>
+        `;
         
         // Enable new patient button
         this.newPatientButton.disabled = false;

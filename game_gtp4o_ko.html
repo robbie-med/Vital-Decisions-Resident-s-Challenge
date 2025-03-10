@@ -1,1 +1,84 @@
-place
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중요한 결정: 레지던트의 도전</title>
+    <style>
+        /* 기존 스타일 유지 */
+    </style>
+</head>
+<body>
+    <header>
+        <h1>중요한 결정: 레지던트의 도전</h1>
+        <div class="score-container">점수: <span id="score">0</span></div>
+    </header>
+
+    <main class="game-container">
+        <section id="data-panel" class="panel">
+            <h2>환자 데이터</h2>
+            <div id="patient-info" class="scrollable-content">
+                <p>활성 환자가 없습니다. "새 환자" 버튼을 눌러 시작하세요.</p>
+            </div>
+        </section>
+
+        <section id="results-panel" class="panel">
+            <h2>결과</h2>
+            <div id="vitals" class="vitals-container">
+                <div class="vital-sign">
+                    <span class="vital-label">심박수:</span>
+                    <span id="heart-rate" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">혈압:</span>
+                    <span id="blood-pressure" class="vital-value">--/--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">평균 동맥압:</span>
+                    <span id="mean-arterial-pressure" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">호흡수:</span>
+                    <span id="respiratory-rate" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">체온:</span>
+                    <span id="temperature" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">산소포화도:</span>
+                    <span id="oxygen-saturation" class="vital-value">--</span>
+                </div>
+            </div>
+            <div id="results-log" class="scrollable-content">
+                <div class="log-entry log-entry-info">
+                    <div class="timestamp">00:00</div>
+                    <h3>환영합니다</h3>
+                    <div class="log-content">
+                        <p>"새 환자" 버튼을 눌러 새 사례를 시작하세요.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="actions-panel" class="panel">
+            <h2>행동</h2>
+            <div class="action-buttons">
+                <button id="exam-btn" class="action-btn">진찰</button>
+                <button id="labs-btn" class="action-btn">검사</button>
+                <button id="drugs-btn" class="action-btn">약물</button>
+                <button id="imaging-btn" class="action-btn">영상</button>
+                <button id="consult-btn" class="action-btn">전문의 상담</button>
+            </div>
+            <div id="action-content" class="scrollable-content">
+                <p>행동을 선택하여 시작하세요.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <button id="new-patient-btn">새 환자</button>
+        <div class="time-display">
+            <span id="game-time">00:00</span>
+        </div>
+    </footer>

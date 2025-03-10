@@ -1738,63 +1738,114 @@ class ActionsManager {
         });
     }
 
-    async performExam(component) {
+    /**
+     * Perform a physical examination
+     * @param {String} component - The component to examine
+     */
+    performExam(component) {
+        const self = this;
         try {
             // Disable buttons during processing
-            this.disableButtons();
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                button.classList.add('disabled');
+            });
             
             // Process the exam action
-            const result = await patientManager.processAction('physical_exam', { component: component });
-            
-            // Add result to the results log
-            resultsManager.addExamResult(
-                component, 
-                result.result.description, 
-                result.conditionChange && result.conditionChange.worsened
-            );
-            
-            // Update score
-            gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
-            
-            // Check if the patient is in a critical state that requires ending the case
-            this.checkForCriticalState(result);
-            
-            // Re-enable buttons
-            this.enableButtons();
+            patientManager.processAction('physical_exam', { component: component })
+            .then(result => {
+                // Add result to the results log
+                resultsManager.addExamResult(
+                    component, 
+                    result.result.description, 
+                    result.conditionChange && result.conditionChange.worsened
+                );
+                
+                // Update score
+                gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+                
+                // Check if the patient is in a critical state that requires ending the case
+                self.checkForCriticalState(result);
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            })
+            .catch(error => {
+                console.error('Error performing exam:', error);
+                resultsManager.addStatusUpdate('Error performing examination. Please try again.', 'abnormal');
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            });
         } catch (error) {
             console.error('Error performing exam:', error);
             resultsManager.addStatusUpdate('Error performing examination. Please try again.', 'abnormal');
-            this.enableButtons();
+            
+            // Re-enable buttons on error
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.classList.remove('disabled');
+            });
         }
     }
 
-    async orderLabTest(test, category) {
+    /**
+     * Order a laboratory test
+     * @param {String} test - The test to order
+     * @param {String} category - The test category
+     */
+    orderLabTest(test, category) {
+        const self = this;
         try {
-            // Disable buttons while processing
-            this.disableButtons();
-            
-            // Process the lab test action
-            const result = await patientManager.processAction('lab_test', { 
-                test: test,
-                category: category
+            // Disable buttons during processing
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                button.classList.add('disabled');
             });
             
-            // Add result to the results log
-            // For individual tests
-            if (test !== category) {
-                const labResults = {};
-                // Properly extract the test value from the result.result.values object
-                if (result.result.values && Object.keys(result.result.values).length > 0) {
-                    // Try to find the test value - check for test name in lowercase, camelCase, etc.
-                    const testKey = Object.keys(result.result.values).find(key => 
-                        key.toLowerCase() === test.toLowerCase() || 
-                        key.toLowerCase().replace(/\s+/g, '') === test.toLowerCase().replace(/\s+/g, '')
-                    );
-                    
-                    if (testKey) {
-                        labResults[test] = result.result.values[testKey];
+            // Process the lab test action
+            patientManager.processAction('lab_test', { 
+                test: test,
+                category: category
+            })
+            .then(result => {
+                // Add result to the results log
+                // For individual tests
+                if (test !== category) {
+                    const labResults = {};
+                    // Properly extract the test value from the result.result.values object
+                    if (result.result.values && Object.keys(result.result.values).length > 0) {
+                        // Try to find the test value - check for test name in lowercase, camelCase, etc.
+                        const testKey = Object.keys(result.result.values).find(key => 
+                            key.toLowerCase() === test.toLowerCase() || 
+                            key.toLowerCase().replace(/\s+/g, '') === test.toLowerCase().replace(/\s+/g, '')
+                        );
+                        
+                        if (testKey) {
+                            labResults[test] = result.result.values[testKey];
+                        } else if (result.result.description && result.result.description.includes(':')) {
+                            // Try to extract value from description if it contains a value after colon
+                            const parts = result.result.description.split(':');
+                            if (parts.length > 1) {
+                                const valuePart = parts[1].trim();
+                                labResults[test] = valuePart;
+                            } else {
+                                labResults[test] = 'See interpretation';
+                            }
+                        } else {
+                            labResults[test] = 'See interpretation';
+                        }
                     } else if (result.result.description && result.result.description.includes(':')) {
-                        // Try to extract value from description if it contains a value after colon
+                        // Try to extract value from description
                         const parts = result.result.description.split(':');
                         if (parts.length > 1) {
                             const valuePart = parts[1].trim();
@@ -1805,127 +1856,222 @@ class ActionsManager {
                     } else {
                         labResults[test] = 'See interpretation';
                     }
-                } else if (result.result.description && result.result.description.includes(':')) {
-                    // Try to extract value from description
-                    const parts = result.result.description.split(':');
-                    if (parts.length > 1) {
-                        const valuePart = parts[1].trim();
-                        labResults[test] = valuePart;
-                    } else {
-                        labResults[test] = 'See interpretation';
-                    }
-                } else {
-                    labResults[test] = 'See interpretation';
+                    
+                    resultsManager.addLabResult(test, labResults, result.result.interpretation || '');
+                } 
+                // For panel tests (like "Complete Blood Count")
+                else {
+                    resultsManager.addLabResult(category, result.result.values || {}, result.result.interpretation || '');
                 }
                 
-                resultsManager.addLabResult(test, labResults, result.result.interpretation || '');
-            } 
-            // For panel tests (like "Complete Blood Count")
-            else {
-                resultsManager.addLabResult(category, result.result.values || {}, result.result.interpretation || '');
-            }
-            
-            // Update score
-            gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
-            
-            // Check if the patient is in a critical state that requires ending the case
-            this.checkForCriticalState(result);
-            
-            // Re-enable buttons
-            this.enableButtons();
+                // Update score
+                gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+                
+                // Check if the patient is in a critical state that requires ending the case
+                self.checkForCriticalState(result);
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            })
+            .catch(error => {
+                console.error('Error ordering lab test:', error);
+                resultsManager.addStatusUpdate('Error ordering laboratory test. Please try again.', 'abnormal');
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            });
         } catch (error) {
             console.error('Error ordering lab test:', error);
             resultsManager.addStatusUpdate('Error ordering laboratory test. Please try again.', 'abnormal');
-            this.enableButtons();
+            
+            // Re-enable buttons
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.classList.remove('disabled');
+            });
         }
     }
 
-    async administerMedication(details) {
+    /**
+     * Administer medication
+     * @param {Object} details - Medication details
+     */
+    administerMedication(details) {
+        const self = this;
         try {
             // Disable buttons during processing
-            this.disableButtons();
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                button.classList.add('disabled');
+            });
             
             // Process the medication action
-            const result = await patientManager.processAction('medication', details);
-            
-            // Add result to the results log
-            resultsManager.addMedicationResponse(
-                `${details.medication} ${details.dose} ${details.route} ${details.frequency}`,
-                result.result.description,
-                !result.conditionChange.worsened
-            );
-            
-            // Update score
-            gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
-            
-            // Check if the patient is in a critical state that requires ending the case
-            this.checkForCriticalState(result);
-            
-            // Return to medications interface
-            this.showDrugsInterface();
-            
-            // Re-enable buttons
-            this.enableButtons();
+            patientManager.processAction('medication', details)
+                .then(result => {
+                    // Add result to the results log
+                    resultsManager.addMedicationResponse(
+                        `${details.medication} ${details.dose} ${details.route} ${details.frequency}`,
+                        result.result.description,
+                        !result.conditionChange.worsened
+                    );
+                    
+                    // Update score
+                    gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+                    
+                    // Check if the patient is in a critical state that requires ending the case
+                    self.checkForCriticalState(result);
+                    
+                    // Return to medications interface
+                    self.showDrugsInterface();
+                    
+                    // Re-enable buttons
+                    buttons.forEach(button => {
+                        button.disabled = false;
+                        button.classList.remove('disabled');
+                    });
+                })
+                .catch(error => {
+                    console.error('Error administering medication:', error);
+                    resultsManager.addStatusUpdate('Error administering medication. Please try again.', 'abnormal');
+                    
+                    // Re-enable buttons
+                    buttons.forEach(button => {
+                        button.disabled = false;
+                        button.classList.remove('disabled');
+                    });
+                });
         } catch (error) {
             console.error('Error administering medication:', error);
             resultsManager.addStatusUpdate('Error administering medication. Please try again.', 'abnormal');
-            this.enableButtons();
+            
+            // Re-enable buttons on error
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.classList.remove('disabled');
+            });
         }
     }
 
-    async orderImaging(imaging) {
+    /**
+     * Order imaging study
+     * @param {String} imaging - The imaging study to order
+     */
+    orderImaging(imaging) {
+        const self = this;
         try {
             // Disable buttons during processing
-            this.disableButtons();
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                button.classList.add('disabled');
+            });
             
             // Process the imaging action
-            const result = await patientManager.processAction('imaging', { study: imaging });
-            
-            // Add result to the results log
-            resultsManager.addImagingResult(
-                imaging,
-                result.result.description,
-                result.result.interpretation && result.result.interpretation.includes('abnormal')
-            );
-            
-            // Update score
-            gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
-            
-            // Check if the patient is in a critical state that requires ending the case
-            this.checkForCriticalState(result);
-            
-            // Re-enable buttons
-            this.enableButtons();
+            patientManager.processAction('imaging', { study: imaging })
+            .then(result => {
+                // Add result to the results log
+                resultsManager.addImagingResult(
+                    imaging,
+                    result.result.description,
+                    result.result.interpretation && result.result.interpretation.includes('abnormal')
+                );
+                
+                // Update score
+                gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+                
+                // Check if the patient is in a critical state that requires ending the case
+                self.checkForCriticalState(result);
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            })
+            .catch(error => {
+                console.error('Error ordering imaging:', error);
+                resultsManager.addStatusUpdate('Error ordering imaging study. Please try again.', 'abnormal');
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            });
         } catch (error) {
             console.error('Error ordering imaging:', error);
             resultsManager.addStatusUpdate('Error ordering imaging study. Please try again.', 'abnormal');
-            this.enableButtons();
+            
+            // Re-enable buttons on error
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.classList.remove('disabled');
+            });
         }
     }
 
-    async requestConsultation(specialist) {
+    /**
+     * Request specialist consultation
+     * @param {String} specialist - The specialist to consult
+     */
+    requestConsultation(specialist) {
+        const self = this;
         try {
             // Disable buttons during processing
-            this.disableButtons();
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                button.classList.add('disabled');
+            });
             
             // Process the consultation action
-            const result = await patientManager.processAction('consultation', { specialist: specialist });
-            
-            // Add result to the results log
-            resultsManager.addConsultationResult(specialist, result.result.description);
-            
-            // Update score
-            gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
-            
-            // Check if the patient is in a critical state that requires ending the case
-            this.checkForCriticalState(result);
-            
-            // Re-enable buttons
-            this.enableButtons();
+            patientManager.processAction('consultation', { specialist: specialist })
+            .then(result => {
+                // Add result to the results log
+                resultsManager.addConsultationResult(specialist, result.result.description);
+                
+                // Update score
+                gameManager.updateScore(result.scoringImpact.points, result.scoringImpact.explanation);
+                
+                // Check if the patient is in a critical state that requires ending the case
+                self.checkForCriticalState(result);
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            })
+            .catch(error => {
+                console.error('Error requesting consultation:', error);
+                resultsManager.addStatusUpdate('Error requesting consultation. Please try again.', 'abnormal');
+                
+                // Re-enable buttons
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+            });
         } catch (error) {
             console.error('Error requesting consultation:', error);
             resultsManager.addStatusUpdate('Error requesting consultation. Please try again.', 'abnormal');
-            this.enableButtons();
+            
+            // Re-enable buttons on error
+            const buttons = this.actionContentElement.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.classList.remove('disabled');
+            });
         }
     }
 

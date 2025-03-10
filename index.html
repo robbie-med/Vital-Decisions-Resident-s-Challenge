@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vital Decisions: Resident's Challenge</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Vital Decisions: Resident's Challenge</h1>
+        <div class="score-container">Score: <span id="score">0</span></div>
+    </header>
+
+    <main class="game-container">
+        <section id="data-panel" class="panel">
+            <h2>Patient Data</h2>
+            <div id="patient-info" class="scrollable-content">
+                <!-- Patient information will be populated here -->
+            </div>
+        </section>
+
+        <section id="results-panel" class="panel">
+            <h2>Results</h2>
+            <div id="vitals" class="vitals-container">
+                <div class="vital-sign">
+                    <span class="vital-label">HR:</span>
+                    <span id="heart-rate" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">BP:</span>
+                    <span id="blood-pressure" class="vital-value">--/--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">MAP:</span>
+                    <span id="mean-arterial-pressure" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">RR:</span>
+                    <span id="respiratory-rate" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">Temp:</span>
+                    <span id="temperature" class="vital-value">--</span>
+                </div>
+                <div class="vital-sign">
+                    <span class="vital-label">O2 Sat:</span>
+                    <span id="oxygen-saturation" class="vital-value">--</span>
+                </div>
+            </div>
+            <div id="results-log" class="scrollable-content">
+                <!-- Results from labs, patient updates, etc. will appear here -->
+            </div>
+        </section>
+
+        <section id="actions-panel" class="panel">
+            <h2>Actions</h2>
+            <div class="action-buttons">
+                <button id="exam-btn" class="action-btn">Exam</button>
+                <button id="labs-btn" class="action-btn">Labs</button>
+                <button id="drugs-btn" class="action-btn">Drugs</button>
+                <button id="imaging-btn" class="action-btn">Imaging</button>
+                <button id="consult-btn" class="action-btn">Consult</button>
+            </div>
+            <div id="action-content" class="scrollable-content">
+                <!-- Dynamic content based on selected action will appear here -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <button id="new-patient-btn">New Patient</button>
+        <div class="time-display">
+            <span id="game-time">00:00</span>
+        </div>
+    </footer>
+
+    <!-- JavaScript Files -->
+    <script src="js/api.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/patient.js"></script>
+    <script src="js/results.js"></script>
+    <script src="js/actions.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

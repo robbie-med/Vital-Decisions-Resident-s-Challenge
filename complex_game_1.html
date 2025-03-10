@@ -774,7 +774,7 @@ class ApiService {
     constructor() {
         this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
         this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "gpt-4o";
+        this.model = "claude-3.5-sonnet";
         this.apiCallCount = 0;
         this.apiCostPerCall = 0.01; // $0.01 per call
     }
@@ -2352,5 +2352,72 @@ const gameManager = new GameManager();
 
 // Initialize the game when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM fully loaded - initializing game...");
+    
+    // Check if all key elements exist
+    const checkElements = [
+        'score', 
+        'api-cost', 
+        'heart-rate',
+        'new-patient-btn',
+        'case-cardio',
+        'case-infectious',
+        'case-emergency',
+        'case-misc',
+        'exam-btn',
+        'labs-btn',
+        'drugs-btn',
+        'imaging-btn',
+        'consult-btn'
+    ];
+    
+    let missingElements = [];
+    checkElements.forEach(id => {
+        if (!document.getElementById(id)) {
+            missingElements.push(id);
+            console.error(`Missing element with ID: ${id}`);
+        }
+    });
+    
+    if (missingElements.length > 0) {
+        alert(`Error: Missing elements: ${missingElements.join(", ")}`);
+        return;
+    }
+    
+    // Manually assign click handlers to ensure they're working
+    document.getElementById('new-patient-btn').onclick = function() {
+        console.log('New Patient button clicked');
+        gameManager.startNewCase();
+    };
+    
+    // Case type buttons
+    ['cardio', 'infectious', 'emergency', 'misc'].forEach(type => {
+        document.getElementById(`case-${type}`).onclick = function() {
+            console.log(`Case type selected: ${type}`);
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.case-type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to this button
+            this.classList.add('active');
+            
+            // Set case type in patient manager
+            patientManager.setCaseType(type);
+        };
+    });
+    
+    // Action buttons
+    ['exam', 'labs', 'drugs', 'imaging', 'consult'].forEach(action => {
+        document.getElementById(`${action}-btn`).onclick = function() {
+            console.log(`Action selected: ${action}`);
+            actionsManager.selectAction(action);
+        };
+    });
+    
+    // Initialize the game
     gameManager.start();
+    
+    console.log("Game initialized successfully");
 });

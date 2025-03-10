@@ -150,7 +150,12 @@
         }
 
         /* Additional elements */
-        .score-container {
+        .header-stats {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .score-container, .cost-container {
             font-size: 1.2rem;
             font-weight: bold;
             background-color: #004C94;
@@ -298,7 +303,10 @@
 <body>
     <header>
         <h1>Vital Decisions: Resident's Challenge</h1>
-        <div class="score-container">Score: <span id="score">0</span></div>
+        <div class="header-stats">
+            <div class="score-container">Score: <span id="score">0</span></div>
+            <div class="cost-container">API Cost: $<span id="api-cost">0.00</span></div>
+        </div>
     </header>
 
     <main class="game-container">
@@ -561,7 +569,7 @@ class ApiService {
     constructor() {
         this.apiKey = "sk-e69yagfy1LbeuHU7wUpAIg";
         this.url = "https://api.ppq.ai/chat/completions";
-        this.model = "gpt-4o";
+        this.model = "claude-3.5-sonnet";
     }
 
     async sendRequest(messages) {
@@ -586,6 +594,9 @@ class ApiService {
                 throw new Error(`API error: ${response.status} ${response.statusText}`);
             }
 
+            // Track API usage cost - $0.06 per API call
+            gameManager.updateApiCost(0.06);
+
             const responseData = await response.json();
             return responseData;
         } catch (error) {
@@ -595,7 +606,7 @@ class ApiService {
     }
 
     async generatePatient(parameters = {}) {
-        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. Format the response as a JSON object with the following structure:
+        const systemPrompt = `You are a medical AI that generates realistic patient cases for a medical diagnostic game for internal medicine residents. Create a patient with a specific internal medicine condition, including relevant history, physical exam findings, vital signs, and labs that would be consistent with the condition. Format the response as a JSON object with the following structure:
         {
             "patientInfo": {
                 "name": "Patient's name",
@@ -621,7 +632,14 @@ class ApiService {
             }
         }
         
-        Ensure the vital signs are realistic and consistent with the condition. Focus on internal medicine conditions at a level appropriate for a resident physician. Make the case challenging but diagnosable with appropriate history, physical findings, and relevant tests.`;
+        Ensure the vital signs are medically accurate and physiologically consistent with the condition. For example:
+        - Patients with sepsis might have elevated heart rate, fever, and lower blood pressure
+        - Patients with heart failure might have elevated heart rate and respiratory rate
+        - Patients with COPD exacerbation might have decreased oxygen saturation and increased respiratory rate
+        
+        The MAP (Mean Arterial Pressure) will be calculated as (2*diastolic + systolic)/3, so ensure the blood pressure values make clinical sense.
+        
+        Focus on realistic internal medicine conditions at a level appropriate for a resident physician. Make the case challenging but diagnosable with appropriate history, physical findings, and relevant tests.`;
 
         const userPrompt = `Generate a new patient case with the following parameters: ${JSON.stringify(parameters)}. Make sure all vitals and findings are consistent with the underlying condition but do not make the diagnosis too obvious.`;
 
@@ -644,7 +662,7 @@ class ApiService {
     }
 
     async processAction(patientData, action, actionDetails) {
-        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game. Respond with realistic clinical outcomes based on the patient's condition and the action taken. Format your response as a JSON object with:
+        const systemPrompt = `You are a medical AI that simulates patient responses to diagnostic and treatment actions in a medical simulation game for internal medicine residents. Respond with realistic clinical outcomes based on the patient's condition and the action taken. Format your response as a JSON object with:
         {
             "result": {
                 "description": "Detailed description of findings or results",
@@ -672,7 +690,29 @@ class ApiService {
             }
         }
         
-        Make the responses medically accurate and consistent with what would be expected in a real patient with the given condition.`;
+        Make the responses medically accurate and physiologically consistent. For example:
+        
+        1. Medications should affect appropriate vital signs:
+           - Beta blockers like metoprolol should reduce both heart rate AND blood pressure
+           - Vasopressors should increase blood pressure
+           - Antipyretics should reduce temperature in febrile patients
+           - Bronchodilators should improve respiratory rate and oxygen saturation in patients with bronchospasm
+        
+        2. The magnitude of effect should be dose-dependent and realistic:
+           - Normal doses should have moderate effects
+           - High doses should have stronger effects (and possibly side effects)
+           - Very high doses should potentially cause adverse effects
+        
+        3. Patient condition should impact medication response:
+           - Patients with severe hypertension might be less responsive to a single dose of antihypertensive
+           - Patients with septic shock might require higher doses of vasopressors
+           - Patients with severe asthma might require multiple treatments
+        
+        4. Timing matters:
+           - Effects of IV medications should be more immediate
+           - Effects of oral medications should be more gradual
+        
+        Be specific with laboratory findings and ensure all vital sign changes are physiologically consistent with each other.`;
 
         const userPrompt = `Current patient: ${JSON.stringify(patientData)}
         
@@ -868,6 +908,13 @@ class Patient {
         
         if (changes.oxygenSaturation !== null && changes.oxygenSaturation !== undefined) {
             this.data.vitalSigns.oxygenSaturation = changes.oxygenSaturation;
+        }
+        
+        // Calculate MAP from current blood pressure values
+        if (this.data.vitalSigns.bloodPressure) {
+            const systolic = this.data.vitalSigns.bloodPressure.systolic;
+            const diastolic = this.data.vitalSigns.bloodPressure.diastolic;
+            this.data.vitalSigns.meanArterialPressure = Math.round((diastolic * 2 + systolic) / 3);
         }
         
         // Record the updated vitals after changes
@@ -1599,11 +1646,13 @@ class GameManager {
     constructor() {
         // Game state
         this.score = 0;
+        this.apiCost = 0;
         this.gameTimer = null;
         this.gameTime = 0;
         
         // DOM elements
         this.scoreElement = document.getElementById('score');
+        this.apiCostElement = document.getElementById('api-cost');
         this.gameTimeElement = document.getElementById('game-time');
         this.newPatientButton = document.getElementById('new-patient-btn');
         this.patientInfoElement = document.getElementById('patient-info');
@@ -1644,6 +1693,8 @@ class GameManager {
             // Reset score for new case
             this.score = 0;
             this.updateScore(0, 'New case started');
+            
+            // Note: We don't reset the API cost - it accumulates across games
             
             // Reset game time
             this.resetGameTime();
@@ -1723,6 +1774,11 @@ class GameManager {
         if (points < 0) {
             resultsManager.addStatusUpdate(`Score penalty: ${points} points - ${reason}`, 'abnormal');
         }
+    }
+    
+    updateApiCost(cost) {
+        this.apiCost += cost;
+        this.apiCostElement.textContent = this.apiCost.toFixed(2);
     }
 
     endCase(success, diagnosis) {

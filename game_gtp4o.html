@@ -584,6 +584,8 @@ class ApiService {
                 messages: messages
             };
 
+            console.log("Sending API request:", JSON.stringify(data));
+            
             const response = await fetch(this.url, {
                 method: 'POST',
                 headers: headers,
@@ -591,6 +593,8 @@ class ApiService {
             });
 
             if (!response.ok) {
+                console.error(`API error: ${response.status} ${response.statusText}`);
+                console.error("Response:", await response.text());
                 throw new Error(`API error: ${response.status} ${response.statusText}`);
             }
 
@@ -598,6 +602,7 @@ class ApiService {
             gameManager.updateApiCost(0.06);
 
             const responseData = await response.json();
+            console.log("API response:", responseData);
             return responseData;
         } catch (error) {
             console.error('API Request Error:', error);
@@ -641,7 +646,7 @@ class ApiService {
         
         Focus on realistic internal medicine conditions at a level appropriate for a resident physician. Make the case challenging but diagnosable with appropriate history, physical findings, and relevant tests.`;
 
-        const userPrompt = `Generate a new patient case with the following parameters: ${JSON.stringify(parameters)}. Make sure all vitals and findings are consistent with the underlying condition but do not make the diagnosis too obvious.`;
+        const userPrompt = `Generate a new patient case with the following parameters: ${JSON.stringify(parameters)}. Make sure all vitals and findings are consistent with the underlying condition but do not make the diagnosis too obvious. Respond with ONLY the JSON object, no other text.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -653,10 +658,23 @@ class ApiService {
         try {
             // Extract JSON from the response
             const responseContent = response.choices[0].message.content;
-            const patientData = JSON.parse(responseContent);
-            return patientData;
+            console.log("Raw patient data response:", responseContent);
+            
+            // Try to find valid JSON in the response
+            let jsonStart = responseContent.indexOf('{');
+            let jsonEnd = responseContent.lastIndexOf('}');
+            
+            if (jsonStart >= 0 && jsonEnd >= 0) {
+                const jsonStr = responseContent.substring(jsonStart, jsonEnd + 1);
+                console.log("Extracted JSON string:", jsonStr);
+                const patientData = JSON.parse(jsonStr);
+                return patientData;
+            } else {
+                throw new Error("Could not find valid JSON in response");
+            }
         } catch (error) {
             console.error('Error parsing patient data:', error);
+            console.error('Response content:', response.choices[0].message.content);
             throw new Error('Failed to generate patient data');
         }
     }
@@ -719,7 +737,7 @@ class ApiService {
         Player action: ${action}
         Action details: ${JSON.stringify(actionDetails)}
         
-        Provide a realistic response to this action, including any changes to vital signs, condition status, and impact on scoring.`;
+        Provide a realistic response to this action, including any changes to vital signs, condition status, and impact on scoring. Respond with ONLY the JSON object, no other text.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -731,10 +749,23 @@ class ApiService {
         try {
             // Extract JSON from the response
             const responseContent = response.choices[0].message.content;
-            const actionResult = JSON.parse(responseContent);
-            return actionResult;
+            console.log("Raw action result response:", responseContent);
+            
+            // Try to find valid JSON in the response
+            let jsonStart = responseContent.indexOf('{');
+            let jsonEnd = responseContent.lastIndexOf('}');
+            
+            if (jsonStart >= 0 && jsonEnd >= 0) {
+                const jsonStr = responseContent.substring(jsonStart, jsonEnd + 1);
+                console.log("Extracted JSON string:", jsonStr);
+                const actionResult = JSON.parse(jsonStr);
+                return actionResult;
+            } else {
+                throw new Error("Could not find valid JSON in response");
+            }
         } catch (error) {
             console.error('Error parsing action result:', error);
+            console.error('Response content:', response.choices[0].message.content);
             throw new Error('Failed to process action');
         }
     }
